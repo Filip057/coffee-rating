@@ -5,9 +5,10 @@ from . import views
 app_name = 'reviews'
 
 # Router for ViewSets
+# Note: tags must be registered BEFORE empty prefix to avoid URL conflicts
 router = DefaultRouter()
-router.register(r'', views.ReviewViewSet, basename='review')
 router.register(r'tags', views.TagViewSet, basename='tag')
+router.register(r'', views.ReviewViewSet, basename='review')
 
 urlpatterns = [
     # Review ViewSet routes (includes list, create, retrieve, update, destroy)
