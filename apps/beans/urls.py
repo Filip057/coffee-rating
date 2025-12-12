@@ -5,9 +5,10 @@ from . import views
 app_name = 'beans'
 
 # Router for ViewSets
+# Note: variants must be registered BEFORE empty prefix to avoid URL conflicts
 router = DefaultRouter()
-router.register(r'', views.CoffeeBeanViewSet, basename='coffeebean')
 router.register(r'variants', views.CoffeeBeanVariantViewSet, basename='variant')
+router.register(r'', views.CoffeeBeanViewSet, basename='coffeebean')
 
 urlpatterns = [
     # Bean ViewSet routes
