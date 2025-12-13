@@ -42,7 +42,7 @@ class TestGroupList:
 class TestGroupCreate:
     """Tests for POST /api/groups/"""
 
-    def test_create_group(self, authenticated_client, user):
+    def test_create_group(self, authenticated_client, group_owner):
         """Create a new group."""
         url = reverse('groups:group-list')
         data = {
@@ -57,9 +57,9 @@ class TestGroupCreate:
 
         # Verify owner membership created
         group = Group.objects.get(name='New Coffee Group')
-        assert group.owner == user
-        assert group.has_member(user)
-        assert group.get_user_role(user) == GroupRole.OWNER
+        assert group.owner == group_owner
+        assert group.has_member(group_owner)
+        assert group.get_user_role(group_owner) == GroupRole.OWNER
 
     def test_create_group_generates_invite_code(self, authenticated_client):
         """Invite code is automatically generated."""
@@ -178,7 +178,7 @@ class TestGroupMembers:
 class TestGroupJoin:
     """Tests for POST /api/groups/{id}/join/"""
 
-    def test_join_group_with_valid_code(self, member_client, group_with_members, other_user, db):
+    def test_join_group_with_valid_code(self, member_client, group_with_members, group_other_user, db):
         """Join group with valid invite code (must be existing member to access)."""
         # Note: Current implementation requires membership to access group detail
         # Testing that an existing member can access the join endpoint
@@ -290,11 +290,11 @@ class TestUpdateMemberRole:
         assert response.status_code == status.HTTP_200_OK
         assert group_with_members.get_user_role(admin_user) == GroupRole.MEMBER
 
-    def test_cannot_change_owner_role(self, admin_client, group_with_members, user):
+    def test_cannot_change_owner_role(self, admin_client, group_with_members, group_owner):
         """Cannot change owner's role."""
         url = reverse('groups:group-update-member-role', args=[group_with_members.id])
         data = {
-            'user_id': str(user.id),
+            'user_id': str(group_owner.id),
             'role': 'member',
         }
         response = admin_client.post(url, data, format='json')
@@ -326,10 +326,10 @@ class TestRemoveMember:
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not group_with_members.has_member(member_user)
 
-    def test_cannot_remove_owner(self, admin_client, group_with_members, user):
+    def test_cannot_remove_owner(self, admin_client, group_with_members, group_owner):
         """Cannot remove group owner."""
         url = reverse('groups:group-remove-member', args=[group_with_members.id])
-        data = {'user_id': str(user.id)}
+        data = {'user_id': str(group_owner.id)}
         response = admin_client.delete(url, data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -351,16 +351,16 @@ class TestRemoveMember:
 class TestGroupLibrary:
     """Tests for GET /api/groups/{id}/library/"""
 
-    def test_get_library(self, authenticated_client, group, library_entry):
+    def test_get_library(self, authenticated_client, group, group_library_entry):
         """Get group's coffee library."""
         url = reverse('groups:group-library', args=[group.id])
         response = authenticated_client.get(url)
 
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data) == 1
-        assert response.data[0]['coffeebean']['name'] == library_entry.coffeebean.name
+        assert response.data[0]['coffeebean']['name'] == group_library_entry.coffeebean.name
 
-    def test_get_library_as_non_member(self, other_client, group, library_entry):
+    def test_get_library_as_non_member(self, other_client, group, group_library_entry):
         """Non-members cannot view library."""
         url = reverse('groups:group-library', args=[group.id])
         response = other_client.get(url)
@@ -373,11 +373,11 @@ class TestGroupLibrary:
 class TestAddToLibrary:
     """Tests for POST /api/groups/{id}/add_to_library/"""
 
-    def test_add_bean_to_library(self, authenticated_client, group, coffeebean):
+    def test_add_bean_to_library(self, authenticated_client, group, group_coffeebean):
         """Add coffee bean to group library."""
         url = reverse('groups:group-add-to-library', args=[group.id])
         data = {
-            'coffeebean_id': str(coffeebean.id),
+            'coffeebean_id': str(group_coffeebean.id),
             'notes': 'Recommended!',
         }
         response = authenticated_client.post(url, data, format='json')
@@ -385,13 +385,13 @@ class TestAddToLibrary:
         assert response.status_code == status.HTTP_201_CREATED
         assert GroupLibraryEntry.objects.filter(
             group=group,
-            coffeebean=coffeebean
+            coffeebean=group_coffeebean
         ).exists()
 
-    def test_add_duplicate_bean(self, authenticated_client, group, library_entry):
+    def test_add_duplicate_bean(self, authenticated_client, group, group_library_entry):
         """Cannot add same bean twice."""
         url = reverse('groups:group-add-to-library', args=[group.id])
-        data = {'coffeebean_id': str(library_entry.coffeebean.id)}
+        data = {'coffeebean_id': str(group_library_entry.coffeebean.id)}
         response = authenticated_client.post(url, data, format='json')
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -441,21 +441,21 @@ class TestMyGroups:
 class TestGroupModel:
     """Tests for Group model methods."""
 
-    def test_has_member(self, group, user, other_user):
+    def test_has_member(self, group, group_owner, group_other_user):
         """Test has_member method."""
-        assert group.has_member(user) is True
-        assert group.has_member(other_user) is False
+        assert group.has_member(group_owner) is True
+        assert group.has_member(group_other_user) is False
 
-    def test_get_user_role(self, group_with_members, user, admin_user, member_user, other_user):
+    def test_get_user_role(self, group_with_members, group_owner, admin_user, member_user, group_other_user):
         """Test get_user_role method."""
-        assert group_with_members.get_user_role(user) == GroupRole.OWNER
+        assert group_with_members.get_user_role(group_owner) == GroupRole.OWNER
         assert group_with_members.get_user_role(admin_user) == GroupRole.ADMIN
         assert group_with_members.get_user_role(member_user) == GroupRole.MEMBER
-        assert group_with_members.get_user_role(other_user) is None
+        assert group_with_members.get_user_role(group_other_user) is None
 
-    def test_is_admin(self, group_with_members, user, admin_user, member_user):
+    def test_is_admin(self, group_with_members, group_owner, admin_user, member_user):
         """Test is_admin method."""
-        assert group_with_members.is_admin(user) is True  # owner is admin
+        assert group_with_members.is_admin(group_owner) is True  # owner is admin
         assert group_with_members.is_admin(admin_user) is True
         assert group_with_members.is_admin(member_user) is False
 
@@ -476,9 +476,9 @@ class TestGroupModel:
 class TestGroupMembershipModel:
     """Tests for GroupMembership model."""
 
-    def test_owner_role_enforced(self, group, user):
+    def test_owner_role_enforced(self, group, group_owner):
         """Owner membership always has owner role."""
-        membership = GroupMembership.objects.get(user=user, group=group)
+        membership = GroupMembership.objects.get(user=group_owner, group=group)
         membership.role = GroupRole.MEMBER  # Try to change
         membership.save()
 
@@ -486,8 +486,8 @@ class TestGroupMembershipModel:
         # Role should be reset to owner since user is group owner
         assert membership.role == GroupRole.OWNER
 
-    def test_membership_str(self, group, user):
+    def test_membership_str(self, group, group_owner):
         """Test string representation."""
-        membership = GroupMembership.objects.get(user=user, group=group)
-        assert user.get_display_name() in str(membership)
+        membership = GroupMembership.objects.get(user=group_owner, group=group)
+        assert group_owner.get_display_name() in str(membership)
         assert group.name in str(membership)

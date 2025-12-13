@@ -15,8 +15,8 @@ def api_client():
 
 
 @pytest.fixture
-def user(db):
-    """Create and return a test user."""
+def review_user(db):
+    """Create and return a test user for reviews."""
     return User.objects.create_user(
         email='reviewer@example.com',
         password='TestPass123!',
@@ -26,53 +26,53 @@ def user(db):
 
 
 @pytest.fixture
-def other_user(db):
-    """Create and return another test user."""
+def review_other_user(db):
+    """Create and return another test user for reviews."""
     return User.objects.create_user(
-        email='other@example.com',
+        email='review_other@example.com',
         password='TestPass123!',
-        display_name='Other User',
+        display_name='Review Other User',
         email_verified=True,
     )
 
 
 @pytest.fixture
-def authenticated_client(api_client, user):
-    """Return API client authenticated as user."""
-    refresh = RefreshToken.for_user(user)
+def review_auth_client(api_client, review_user):
+    """Return API client authenticated as review user."""
+    refresh = RefreshToken.for_user(review_user)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
     return api_client
 
 
 @pytest.fixture
-def other_client(api_client, other_user):
+def review_other_client(api_client, review_other_user):
     """Return API client authenticated as other user."""
-    refresh = RefreshToken.for_user(other_user)
+    refresh = RefreshToken.for_user(review_other_user)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
     return api_client
 
 
 @pytest.fixture
-def coffeebean(db, user):
-    """Create and return a test coffee bean."""
+def review_coffeebean(db, review_user):
+    """Create and return a test coffee bean for reviews."""
     return CoffeeBean.objects.create(
         name='Ethiopia Yirgacheffe',
         roastery_name='Test Roastery',
         origin_country='Ethiopia',
         roast_profile='light',
-        created_by=user,
+        created_by=review_user,
     )
 
 
 @pytest.fixture
-def another_coffeebean(db, user):
-    """Create and return another test coffee bean."""
+def review_another_coffeebean(db, review_user):
+    """Create and return another test coffee bean for reviews."""
     return CoffeeBean.objects.create(
         name='Brazil Santos',
         roastery_name='Another Roastery',
         origin_country='Brazil',
         roast_profile='dark',
-        created_by=user,
+        created_by=review_user,
     )
 
 
@@ -104,11 +104,11 @@ def tag_floral(db):
 
 
 @pytest.fixture
-def review(db, user, coffeebean, tag_fruity):
+def review(db, review_user, review_coffeebean, tag_fruity):
     """Create and return a test review."""
     review = Review.objects.create(
-        coffeebean=coffeebean,
-        author=user,
+        coffeebean=review_coffeebean,
+        author=review_user,
         rating=4,
         aroma_score=4,
         flavor_score=5,
@@ -122,11 +122,11 @@ def review(db, user, coffeebean, tag_fruity):
 
 
 @pytest.fixture
-def other_review(db, other_user, coffeebean):
+def other_review(db, review_other_user, review_coffeebean):
     """Create a review by another user."""
     return Review.objects.create(
-        coffeebean=coffeebean,
-        author=other_user,
+        coffeebean=review_coffeebean,
+        author=review_other_user,
         rating=3,
         notes='Decent coffee.',
         context='personal',
@@ -134,15 +134,15 @@ def other_review(db, other_user, coffeebean):
 
 
 @pytest.fixture
-def group(db, user):
-    """Create a test group."""
+def review_group(db, review_user):
+    """Create a test group for reviews."""
     group = Group.objects.create(
-        name='Coffee Club',
+        name='Review Coffee Club',
         description='A group for coffee lovers',
-        owner=user,
+        owner=review_user,
     )
     GroupMembership.objects.create(
-        user=user,
+        user=review_user,
         group=group,
         role=GroupRole.OWNER,
     )
@@ -150,21 +150,21 @@ def group(db, user):
 
 
 @pytest.fixture
-def library_entry(db, user, coffeebean):
-    """Create a user library entry."""
+def review_library_entry(db, review_user, review_coffeebean):
+    """Create a user library entry for reviews."""
     return UserLibraryEntry.objects.create(
-        user=user,
-        coffeebean=coffeebean,
+        user=review_user,
+        coffeebean=review_coffeebean,
         added_by='manual',
     )
 
 
 @pytest.fixture
-def archived_library_entry(db, user, another_coffeebean):
-    """Create an archived library entry."""
+def review_archived_library_entry(db, review_user, review_another_coffeebean):
+    """Create an archived library entry for reviews."""
     return UserLibraryEntry.objects.create(
-        user=user,
-        coffeebean=another_coffeebean,
+        user=review_user,
+        coffeebean=review_another_coffeebean,
         added_by='manual',
         is_archived=True,
     )

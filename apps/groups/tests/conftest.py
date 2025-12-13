@@ -14,7 +14,7 @@ def api_client():
 
 
 @pytest.fixture
-def user(db):
+def group_owner(db):
     """Create and return a test user (group owner)."""
     return User.objects.create_user(
         email='owner@example.com',
@@ -47,7 +47,7 @@ def member_user(db):
 
 
 @pytest.fixture
-def other_user(db):
+def group_other_user(db):
     """Create and return a user not in any group."""
     return User.objects.create_user(
         email='other@example.com',
@@ -58,9 +58,9 @@ def other_user(db):
 
 
 @pytest.fixture
-def authenticated_client(api_client, user):
+def authenticated_client(api_client, group_owner):
     """Return API client authenticated as group owner."""
-    refresh = RefreshToken.for_user(user)
+    refresh = RefreshToken.for_user(group_owner)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
     return api_client
 
@@ -82,25 +82,25 @@ def member_client(api_client, member_user):
 
 
 @pytest.fixture
-def other_client(api_client, other_user):
+def other_client(api_client, group_other_user):
     """Return API client authenticated as non-member user."""
-    refresh = RefreshToken.for_user(other_user)
+    refresh = RefreshToken.for_user(group_other_user)
     api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
     return api_client
 
 
 @pytest.fixture
-def group(db, user):
+def group(db, group_owner):
     """Create and return a test group with owner membership."""
     group = Group.objects.create(
         name='Test Coffee Club',
         description='A group for coffee enthusiasts',
         is_private=True,
-        owner=user,
+        owner=group_owner,
     )
     # Create owner membership
     GroupMembership.objects.create(
-        user=user,
+        user=group_owner,
         group=group,
         role=GroupRole.OWNER,
     )
@@ -124,16 +124,16 @@ def group_with_members(group, admin_user, member_user):
 
 
 @pytest.fixture
-def public_group(db, user):
+def public_group(db, group_owner):
     """Create and return a public group."""
     group = Group.objects.create(
         name='Public Coffee Club',
         description='A public group',
         is_private=False,
-        owner=user,
+        owner=group_owner,
     )
     GroupMembership.objects.create(
-        user=user,
+        user=group_owner,
         group=group,
         role=GroupRole.OWNER,
     )
@@ -141,33 +141,33 @@ def public_group(db, user):
 
 
 @pytest.fixture
-def coffeebean(db, user):
+def group_coffeebean(db, group_owner):
     """Create and return a test coffee bean."""
     return CoffeeBean.objects.create(
         name='Ethiopia Yirgacheffe',
         roastery_name='Test Roastery',
         origin_country='Ethiopia',
-        created_by=user,
+        created_by=group_owner,
     )
 
 
 @pytest.fixture
-def another_coffeebean(db, user):
+def group_another_coffeebean(db, group_owner):
     """Create and return another test coffee bean."""
     return CoffeeBean.objects.create(
         name='Brazil Santos',
         roastery_name='Another Roastery',
         origin_country='Brazil',
-        created_by=user,
+        created_by=group_owner,
     )
 
 
 @pytest.fixture
-def library_entry(db, group, coffeebean, user):
+def group_library_entry(db, group, group_coffeebean, group_owner):
     """Create and return a library entry."""
     return GroupLibraryEntry.objects.create(
         group=group,
-        coffeebean=coffeebean,
-        added_by=user,
+        coffeebean=group_coffeebean,
+        added_by=group_owner,
         notes='Great coffee!',
     )
