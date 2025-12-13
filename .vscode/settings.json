@@ -1,0 +1,18 @@
+{
+    "claude.contextFiles": [
+      "README.md",
+      "docs/**/*.md",
+      "requirements.txt",
+      "CLAUDE_CODE_TODO.md"
+    ],
+    "claude.excludePatterns": [
+      "**/__pycache__/**",
+      "**/node_modules/**",
+      "**/.venv/**",
+      "**/migrations/**",
+      "**/*.pyc",
+      "**/db.sqlite3"
+    ],
+    "claude.maxContextFiles": 20,
+    "claude.autoSuggest": true
+  }

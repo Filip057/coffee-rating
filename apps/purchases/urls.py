@@ -5,9 +5,10 @@ from . import views
 app_name = 'purchases'
 
 # Router for ViewSets
+# Note: shares must be registered BEFORE empty prefix to avoid URL conflicts
 router = DefaultRouter()
-router.register(r'', views.PurchaseRecordViewSet, basename='purchase')
 router.register(r'shares', views.PaymentShareViewSet, basename='share')
+router.register(r'', views.PurchaseRecordViewSet, basename='purchase')
 
 urlpatterns = [
     # Purchase ViewSet routes
