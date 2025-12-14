@@ -89,7 +89,18 @@ def group_consumption(request, group_id):
         start_date=start_date,
         end_date=end_date
     )
-    
+
+    # Serialize User objects in member_breakdown
+    if 'member_breakdown' in data:
+        for member in data['member_breakdown']:
+            if 'user' in member:
+                user = member['user']
+                member['user'] = {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'display_name': user.get_display_name(),
+                }
+
     return Response(data)
 
 
