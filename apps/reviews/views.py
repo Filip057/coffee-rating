@@ -1,4 +1,4 @@
-from rest_framework import status, generics, viewsets
+from rest_framework import status, generics, viewsets, serializers as drf_serializers
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
@@ -6,6 +6,8 @@ from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django.db.models import Count, Avg, Q
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Review, Tag, UserLibraryEntry
 from .serializers import (
     ReviewSerializer,
@@ -18,6 +20,19 @@ from .serializers import (
 from apps.beans.models import CoffeeBean
 from apps.groups.models import Group
 from .permissions import IsReviewAuthorOrReadOnly
+
+
+# Request/Response serializers for API documentation
+class AddToLibraryRequestSerializer(drf_serializers.Serializer):
+    coffeebean_id = drf_serializers.UUIDField(help_text="UUID of coffee bean to add")
+
+
+class ArchiveLibraryRequestSerializer(drf_serializers.Serializer):
+    is_archived = drf_serializers.BooleanField(default=True)
+
+
+class ErrorResponseSerializer(drf_serializers.Serializer):
+    error = drf_serializers.CharField()
 
 
 class ReviewPagination(PageNumberPagination):
@@ -228,17 +243,19 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter('archived', OpenApiTypes.BOOL, description='Show archived entries', default=False),
+        OpenApiParameter('search', OpenApiTypes.STR, description='Search in bean name or roastery'),
+    ],
+    responses={200: UserLibraryEntrySerializer(many=True)},
+    description="Get user's coffee library with their saved beans.",
+    tags=['reviews'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_library(request):
-    """
-    Get user's coffee library.
-    
-    GET /api/reviews/library/
-    Query params:
-    - archived: true/false (default: false)
-    - search: Search in bean name
-    """
+    """Get user's coffee library."""
     archived = request.GET.get('archived', 'false').lower() == 'true'
     search = request.GET.get('search')
     
@@ -259,15 +276,21 @@ def user_library(request):
     return Response(serializer.data)
 
 
+@extend_schema(
+    request=AddToLibraryRequestSerializer,
+    responses={
+        201: UserLibraryEntrySerializer,
+        200: UserLibraryEntrySerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer,
+    },
+    description="Manually add a coffee bean to user's library. Returns 200 if already exists.",
+    tags=['reviews'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_library(request):
-    """
-    Manually add coffee bean to user's library.
-    
-    POST /api/reviews/library/add/
-    Body: {"coffeebean_id": "uuid"}
-    """
+    """Manually add coffee bean to user's library."""
     coffeebean_id = request.data.get('coffeebean_id')
     
     if not coffeebean_id:
@@ -298,15 +321,19 @@ def add_to_library(request):
     )
 
 
+@extend_schema(
+    request=ArchiveLibraryRequestSerializer,
+    responses={
+        200: UserLibraryEntrySerializer,
+        404: ErrorResponseSerializer,
+    },
+    description="Archive or unarchive a library entry.",
+    tags=['reviews'],
+)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def archive_library_entry(request, entry_id):
-    """
-    Archive/unarchive a library entry.
-    
-    PATCH /api/reviews/library/{entry_id}/archive/
-    Body: {"is_archived": true/false}
-    """
+    """Archive/unarchive a library entry."""
     try:
         entry = UserLibraryEntry.objects.get(id=entry_id, user=request.user)
     except UserLibraryEntry.DoesNotExist:
@@ -323,14 +350,18 @@ def archive_library_entry(request, entry_id):
     return Response(serializer.data)
 
 
+@extend_schema(
+    responses={
+        204: None,
+        404: ErrorResponseSerializer,
+    },
+    description="Remove a coffee bean from user's library.",
+    tags=['reviews'],
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_from_library(request, entry_id):
-    """
-    Remove coffee bean from user's library.
-    
-    DELETE /api/reviews/library/{entry_id}/
-    """
+    """Remove coffee bean from user's library."""
     try:
         entry = UserLibraryEntry.objects.get(id=entry_id, user=request.user)
     except UserLibraryEntry.DoesNotExist:
@@ -382,15 +413,19 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
+@extend_schema(
+    request=TagSerializer,
+    responses={
+        201: TagSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Create a new taste tag for coffee reviews.",
+    tags=['reviews'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_tag(request):
-    """
-    Create a new taste tag.
-    
-    POST /api/reviews/tags/create/
-    Body: {"name": "fruity", "category": "flavor"}
-    """
+    """Create a new taste tag."""
     serializer = TagSerializer(data=request.data)
     
     if serializer.is_valid():
@@ -400,13 +435,17 @@ def create_tag(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    responses={
+        200: BeanReviewSummarySerializer,
+        404: ErrorResponseSerializer,
+    },
+    description="Get comprehensive review summary for a coffee bean including rating breakdown, common tags, and recent reviews.",
+    tags=['reviews'],
+)
 @api_view(['GET'])
 def bean_review_summary(request, bean_id):
-    """
-    Get comprehensive review summary for a coffee bean.
-    
-    GET /api/reviews/bean/{bean_id}/summary/
-    """
+    """Get comprehensive review summary for a coffee bean."""
     try:
         bean = CoffeeBean.objects.get(id=bean_id, is_active=True)
     except CoffeeBean.DoesNotExist:

@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 from .models import Group, GroupMembership, GroupLibraryEntry, GroupRole
 from .serializers import (
     GroupSerializer,
@@ -360,14 +361,15 @@ class GroupViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(
+    responses={200: GroupListSerializer(many=True)},
+    description="Get all groups where the current user is a member.",
+    tags=['groups'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_groups(request):
-    """
-    Get all groups where user is a member.
-    
-    GET /api/groups/my/
-    """
+    """Get all groups where user is a member."""
     groups = Group.objects.filter(
         memberships__user=request.user
     ).select_related('owner').distinct()

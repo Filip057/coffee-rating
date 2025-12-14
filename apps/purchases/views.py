@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers as drf_serializers
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
+from drf_spectacular.utils import extend_schema
 from .models import PurchaseRecord, PaymentShare, PaymentStatus
 from .serializers import (
     PurchaseRecordSerializer,
@@ -18,6 +19,13 @@ from .serializers import (
 from .services import PurchaseSplitService, SPDPaymentGenerator
 from apps.groups.models import Group
 from django.conf import settings
+
+
+# Response serializers for API documentation
+class OutstandingPaymentsResponseSerializer(drf_serializers.Serializer):
+    total_outstanding = drf_serializers.DecimalField(max_digits=10, decimal_places=2)
+    count = drf_serializers.IntegerField()
+    shares = PaymentShareSerializer(many=True)
 
 
 class PurchasePagination(PageNumberPagination):
@@ -289,14 +297,15 @@ class PaymentShareViewSet(viewsets.ReadOnlyModelViewSet):
         })
 
 
+@extend_schema(
+    responses={200: OutstandingPaymentsResponseSerializer},
+    description="Get all outstanding (unpaid) payment shares for the current user.",
+    tags=['purchases'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_outstanding_payments(request):
-    """
-    Get all outstanding payments for current user.
-    
-    GET /api/purchases/my_outstanding/
-    """
+    """Get all outstanding payments for current user."""
     shares = PaymentShare.objects.filter(
         user=request.user,
         status=PaymentStatus.UNPAID

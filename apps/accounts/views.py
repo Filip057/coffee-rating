@@ -1,10 +1,11 @@
-from rest_framework import status, generics
+from rest_framework import status, generics, serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, inline_serializer
 from .models import User
 from .serializers import (
     UserRegistrationSerializer,
@@ -16,19 +17,52 @@ from .serializers import (
 import secrets
 
 
+# Response serializers for API documentation
+class TokensResponseSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+    access = serializers.CharField()
+
+
+class AuthResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+    user = UserSerializer()
+    tokens = TokensResponseSerializer()
+
+
+class MessageResponseSerializer(serializers.Serializer):
+    message = serializers.CharField()
+
+
+class ErrorResponseSerializer(serializers.Serializer):
+    error = serializers.CharField()
+
+
+class LogoutRequestSerializer(serializers.Serializer):
+    refresh = serializers.CharField(help_text="Refresh token to blacklist")
+
+
+class VerifyEmailRequestSerializer(serializers.Serializer):
+    token = serializers.CharField(help_text="Email verification token")
+
+
+class DeleteAccountRequestSerializer(serializers.Serializer):
+    password = serializers.CharField(help_text="Current password for confirmation")
+    confirm = serializers.BooleanField(help_text="Must be true to confirm deletion")
+
+
+@extend_schema(
+    request=UserRegistrationSerializer,
+    responses={
+        201: AuthResponseSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Register a new user account and receive JWT tokens.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
-    """
-    Register a new user account.
-    
-    POST /api/auth/register/
-    Body: {
-        "email": "user@example.com",
-        "password": "securepassword",
-        "display_name": "John Doe" (optional)
-    }
-    """
+    """Register a new user account."""
     serializer = UserRegistrationSerializer(data=request.data)
     
     if serializer.is_valid():
@@ -49,18 +83,21 @@ def register(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=UserLoginSerializer,
+    responses={
+        200: AuthResponseSerializer,
+        400: ErrorResponseSerializer,
+        401: ErrorResponseSerializer,
+        403: ErrorResponseSerializer,
+    },
+    description="Authenticate with email and password to receive JWT tokens.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
-    """
-    Login with email and password.
-    
-    POST /api/auth/login/
-    Body: {
-        "email": "user@example.com",
-        "password": "password"
-    }
-    """
+    """Login with email and password."""
     serializer = UserLoginSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -99,17 +136,19 @@ def login(request):
     })
 
 
+@extend_schema(
+    request=LogoutRequestSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Logout and optionally blacklist the refresh token.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout(request):
-    """
-    Logout (blacklist refresh token if using blacklist).
-    
-    POST /api/auth/logout/
-    Body: {
-        "refresh": "refresh_token_string"
-    }
-    """
+    """Logout and blacklist refresh token."""
     try:
         refresh_token = request.data.get('refresh')
         if refresh_token:
@@ -126,29 +165,31 @@ def logout(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    responses={200: UserSerializer},
+    description="Get the current authenticated user's profile.",
+    tags=['auth'],
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
-    """
-    Get current authenticated user profile.
-    
-    GET /api/auth/user/
-    """
+    """Get current authenticated user profile."""
     return Response(UserSerializer(request.user).data)
 
 
+@extend_schema(
+    request=UserSerializer,
+    responses={
+        200: UserSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Update the current user's profile (display_name, preferences).",
+    tags=['auth'],
+)
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def update_profile(request):
-    """
-    Update user profile.
-    
-    PATCH /api/auth/user/
-    Body: {
-        "display_name": "New Name",
-        "preferences": {...}
-    }
-    """
+    """Update user profile."""
     user = request.user
     serializer = UserSerializer(user, data=request.data, partial=True)
     
@@ -159,17 +200,16 @@ def update_profile(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=PasswordResetRequestSerializer,
+    responses={200: MessageResponseSerializer},
+    description="Request a password reset email. Always returns success for security.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def request_password_reset(request):
-    """
-    Request password reset email.
-    
-    POST /api/auth/password-reset/
-    Body: {
-        "email": "user@example.com"
-    }
-    """
+    """Request password reset email."""
     serializer = PasswordResetRequestSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -200,18 +240,19 @@ def request_password_reset(request):
         })
 
 
+@extend_schema(
+    request=PasswordResetConfirmSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Confirm password reset with token and set new password.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def confirm_password_reset(request):
-    """
-    Confirm password reset with token.
-    
-    POST /api/auth/password-reset/confirm/
-    Body: {
-        "token": "reset_token",
-        "new_password": "newsecurepassword"
-    }
-    """
+    """Confirm password reset with token."""
     serializer = PasswordResetConfirmSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -238,17 +279,19 @@ def confirm_password_reset(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=VerifyEmailRequestSerializer,
+    responses={
+        200: MessageResponseSerializer,
+        400: ErrorResponseSerializer,
+    },
+    description="Verify user's email address with verification token.",
+    tags=['auth'],
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def verify_email(request):
-    """
-    Verify email with token.
-    
-    POST /api/auth/verify-email/
-    Body: {
-        "token": "verification_token"
-    }
-    """
+    """Verify email with token."""
     token = request.data.get('token')
     user = request.user
     
@@ -266,18 +309,20 @@ def verify_email(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(
+    request=DeleteAccountRequestSerializer,
+    responses={
+        204: None,
+        400: ErrorResponseSerializer,
+        401: ErrorResponseSerializer,
+    },
+    description="GDPR-compliant account deletion. Anonymizes user data.",
+    tags=['auth'],
+)
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_account(request):
-    """
-    GDPR-compliant account deletion (anonymization).
-    
-    DELETE /api/auth/user/
-    Body: {
-        "password": "currentpassword",
-        "confirm": true
-    }
-    """
+    """GDPR-compliant account deletion (anonymization)."""
     password = request.data.get('password')
     confirm = request.data.get('confirm')
     
