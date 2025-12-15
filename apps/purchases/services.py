@@ -1,3 +1,33 @@
+"""
+Purchase Services Module
+=========================
+
+This module provides business logic services for purchase management,
+including haléř-precise payment splitting and Czech SPD QR code generation.
+
+Classes:
+    PurchaseSplitService: Handles group purchase creation and payment reconciliation.
+    SPDPaymentGenerator: Generates Czech SPD format QR codes for bank payments.
+
+Example:
+    Creating a group purchase with automatic splitting::
+
+        from apps.purchases.services import PurchaseSplitService
+        from decimal import Decimal
+
+        purchase, shares = PurchaseSplitService.create_group_purchase(
+            group_id=group.id,
+            bought_by_user=current_user,
+            total_price_czk=Decimal('900.00'),
+            date=date.today(),
+            coffeebean=ethiopia_bean,
+        )
+
+        # Each member gets a PaymentShare with haléř-precise amount
+        for share in shares:
+            print(f"{share.user.email}: {share.amount_czk} CZK")
+"""
+
 from decimal import Decimal, ROUND_DOWN
 from django.db import transaction
 from .models import PurchaseRecord, PaymentShare, PaymentStatus
@@ -5,7 +35,43 @@ from apps.groups.models import Group, GroupMembership
 
 
 class PurchaseSplitService:
-    """Service for creating group purchases with haléř-precise splitting."""
+    """
+    Service for creating group purchases with haléř-precise payment splitting.
+
+    This service handles the business logic for group coffee purchases,
+    ensuring that payment amounts are split with exact precision (no rounding
+    errors) using integer haléř arithmetic.
+
+    The haléř is the smallest Czech currency unit (1 CZK = 100 haléř).
+    By converting to haléře, performing integer division, and distributing
+    remainders, we guarantee that splits always sum exactly to the total.
+
+    Methods:
+        create_group_purchase: Create a purchase and split among members.
+        reconcile_payment: Mark a payment share as paid.
+        get_purchase_summary: Get detailed payment status for a purchase.
+
+    Example:
+        Basic group purchase::
+
+            purchase, shares = PurchaseSplitService.create_group_purchase(
+                group_id=group.id,
+                bought_by_user=buyer,
+                total_price_czk=Decimal('100.00'),
+                date=date.today(),
+            )
+            # With 3 members: shares are 33.34, 33.33, 33.33 CZK
+
+        Purchase with specific members::
+
+            purchase, shares = PurchaseSplitService.create_group_purchase(
+                group_id=group.id,
+                bought_by_user=buyer,
+                total_price_czk=Decimal('500.00'),
+                date=date.today(),
+                split_members=[user1.id, user2.id],  # Only these 2 users
+            )
+    """
     
     @staticmethod
     def create_group_purchase(
@@ -21,26 +87,68 @@ class PurchaseSplitService:
     ):
         """
         Create a group purchase and split payment among members.
-        
-        Uses haléř-precise arithmetic:
-        1. Convert total to haléře (total_czk * 100)
-        2. Calculate base share per member (floor division)
-        3. Distribute remainder (1 haléř each) to first K members
-        4. Convert back to CZK (divide by 100)
-        
+
+        This method creates a PurchaseRecord and automatically generates
+        PaymentShare records for each participant with haléř-precise amounts.
+
+        The splitting algorithm ensures no rounding errors:
+            1. Convert total to haléře (total_czk * 100)
+            2. Calculate base share per member (floor division)
+            3. Distribute remainder (1 haléř each) to first K members
+            4. Convert back to CZK (divide by 100)
+
         Args:
-            group_id: Group UUID
-            bought_by_user: User who made the purchase
-            total_price_czk: Total purchase price (Decimal)
-            date: Purchase date
-            coffeebean: CoffeeBean instance (optional)
-            variant: CoffeeBeanVariant instance (optional)
-            package_weight_grams: Package weight if custom (optional)
-            note: Purchase notes
-            split_members: List of user IDs to split among (None = all members)
-        
+            group_id (UUID): The group's unique identifier.
+            bought_by_user (User): The user who made the purchase.
+            total_price_czk (Decimal): Total purchase price in CZK.
+            date (date): The date of purchase.
+            coffeebean (CoffeeBean, optional): The purchased coffee bean.
+                Defaults to None.
+            variant (CoffeeBeanVariant, optional): The specific variant/package.
+                Defaults to None.
+            package_weight_grams (int, optional): Package weight in grams.
+                If not provided, uses variant.package_weight_grams if available.
+                Defaults to None.
+            note (str, optional): Purchase notes or comments.
+                Defaults to empty string.
+            split_members (list[UUID], optional): List of user IDs to split among.
+                If None, splits among all group members.
+                Defaults to None.
+
         Returns:
-            (PurchaseRecord, list[PaymentShare])
+            tuple: A tuple containing:
+                - PurchaseRecord: The created purchase record.
+                - list[PaymentShare]: List of created payment shares.
+
+        Raises:
+            Group.DoesNotExist: If the group_id doesn't exist.
+            ValueError: If no participants are found for splitting.
+
+        Example:
+            Split among all members::
+
+                purchase, shares = PurchaseSplitService.create_group_purchase(
+                    group_id=group.id,
+                    bought_by_user=request.user,
+                    total_price_czk=Decimal('900.00'),
+                    date=date.today(),
+                    coffeebean=bean,
+                    variant=variant,
+                )
+
+            Split among specific members::
+
+                purchase, shares = PurchaseSplitService.create_group_purchase(
+                    group_id=group.id,
+                    bought_by_user=request.user,
+                    total_price_czk=Decimal('600.00'),
+                    date=date.today(),
+                    split_members=[user1.id, user2.id],
+                )
+
+        Note:
+            This method is wrapped in a database transaction. If any step
+            fails, all changes are rolled back.
         """
         with transaction.atomic():
             # Validate group
@@ -101,25 +209,50 @@ class PurchaseSplitService:
     def _calculate_splits(total_czk, participants):
         """
         Split amount with haléř precision (no rounding errors).
-        
+
+        This is the core algorithm for precise payment splitting. It converts
+        the amount to the smallest currency unit (haléře), performs integer
+        arithmetic, and distributes any remainder evenly.
+
         Algorithm:
-        1. Convert to haléře: total_halere = int(total_czk * 100)
-        2. Base share: base = total_halere // N
-        3. Remainder: remainder = total_halere % N
-        4. First 'remainder' participants get (base + 1) haléře
-        5. Rest get 'base' haléře
-        6. Convert back to CZK: amount_czk = halere / 100
-        
-        Example:
-            100.00 CZK / 3 people
-            = 10000 haléře / 3
-            = 3333 haléře each + 1 haléř remainder
-            = [3334, 3333, 3333] haléře
-            = [33.34, 33.33, 33.33] CZK
-            Total: 100.00 CZK (exact!)
-        
+            1. Convert to haléře: ``total_halere = int(total_czk * 100)``
+            2. Base share: ``base = total_halere // N``
+            3. Remainder: ``remainder = total_halere % N``
+            4. First 'remainder' participants get ``(base + 1)`` haléře
+            5. Rest get 'base' haléře
+            6. Convert back to CZK: ``amount_czk = halere / 100``
+
+        Args:
+            total_czk (Decimal): The total amount to split in CZK.
+            participants (list[User]): List of User objects to split among.
+
         Returns:
-            List of (user, amount_czk) tuples
+            list[tuple]: List of (User, Decimal) tuples where each tuple
+            contains a user and their share amount in CZK.
+
+        Raises:
+            ValueError: If participants list is empty.
+            ValueError: If calculated split doesn't sum to total (safety check).
+
+        Example:
+            100.00 CZK split among 3 people::
+
+                >>> splits = PurchaseSplitService._calculate_splits(
+                ...     Decimal('100.00'),
+                ...     [user1, user2, user3]
+                ... )
+                >>> for user, amount in splits:
+                ...     print(f"{user}: {amount}")
+                user1: 33.34
+                user2: 33.33
+                user3: 33.33
+                >>> sum(amount for _, amount in splits)
+                Decimal('100.00')  # Exact!
+
+        Note:
+            The order of participants matters for remainder distribution.
+            The first N participants (where N = remainder) receive 1 extra
+            haléř each.
         """
         if not participants:
             raise ValueError("At least one participant required")
@@ -157,15 +290,41 @@ class PurchaseSplitService:
     @staticmethod
     def reconcile_payment(share_id, paid_by_user, method='manual'):
         """
-        Mark a payment share as paid.
-        
+        Mark a payment share as paid and update the parent purchase.
+
+        This method handles the reconciliation of a single payment share,
+        updating its status to PAID and triggering the parent purchase's
+        collection status update.
+
         Args:
-            share_id: PaymentShare UUID
-            paid_by_user: User confirming payment
-            method: 'manual', 'bank_import', 'webhook'
-        
+            share_id (UUID): The payment share's unique identifier.
+            paid_by_user (User): The user confirming/recording the payment.
+                This is typically an admin or the group owner.
+            method (str, optional): How the payment was reconciled.
+                Options: 'manual', 'bank_import', 'webhook'.
+                Defaults to 'manual'.
+
         Returns:
-            Updated PaymentShare
+            PaymentShare: The updated payment share with status=PAID.
+
+        Raises:
+            PaymentShare.DoesNotExist: If the share_id doesn't exist.
+            ValueError: If the share is already marked as paid.
+
+        Example:
+            Manual reconciliation::
+
+                share = PurchaseSplitService.reconcile_payment(
+                    share_id=payment_share.id,
+                    paid_by_user=admin_user,
+                    method='manual',
+                )
+                print(f"Share {share.id} marked as paid at {share.paid_at}")
+
+        Note:
+            This method uses SELECT FOR UPDATE to prevent race conditions
+            when multiple reconciliation attempts happen simultaneously.
+            It's wrapped in a database transaction.
         """
         with transaction.atomic():
             share = PaymentShare.objects.select_for_update().get(id=share_id)
@@ -179,7 +338,40 @@ class PurchaseSplitService:
     
     @staticmethod
     def get_purchase_summary(purchase_id):
-        """Get detailed summary of purchase and payment status."""
+        """
+        Get a detailed summary of a purchase and its payment status.
+
+        This method provides a comprehensive overview of a purchase including
+        the amounts collected, outstanding balance, and lists of paid/unpaid
+        payment shares.
+
+        Args:
+            purchase_id (UUID): The purchase record's unique identifier.
+
+        Returns:
+            dict: A dictionary containing:
+                - purchase (PurchaseRecord): The purchase object.
+                - total_amount (Decimal): Total purchase price in CZK.
+                - collected_amount (Decimal): Sum of paid shares in CZK.
+                - outstanding_amount (Decimal): Remaining amount to collect.
+                - is_fully_paid (bool): Whether all shares are paid.
+                - total_shares (int): Total number of payment shares.
+                - paid_count (int): Number of paid shares.
+                - unpaid_count (int): Number of unpaid shares.
+                - paid_shares (list[PaymentShare]): List of paid shares.
+                - unpaid_shares (list[PaymentShare]): List of unpaid shares.
+
+        Raises:
+            PurchaseRecord.DoesNotExist: If the purchase_id doesn't exist.
+
+        Example:
+            Getting purchase status::
+
+                summary = PurchaseSplitService.get_purchase_summary(purchase.id)
+                print(f"Collected: {summary['collected_amount']} / {summary['total_amount']}")
+                print(f"Outstanding: {summary['outstanding_amount']}")
+                print(f"Paid: {summary['paid_count']}/{summary['total_shares']}")
+        """
         purchase = PurchaseRecord.objects.prefetch_related(
             'payment_shares__user'
         ).get(id=purchase_id)
@@ -206,9 +398,49 @@ class PurchaseSplitService:
 class SPDPaymentGenerator:
     """
     Generate SPD QR codes for Czech bank payments.
-    
-    SPD (Short Payment Descriptor) is a Czech standard for payment QR codes.
-    Format: SPD*1.0*ACC:<IBAN>*AM:<amount>*CC:CZK*MSG:<message>*X-VS:<variable_symbol>
+
+    SPD (Short Payment Descriptor) is a Czech standard for encoding payment
+    information into QR codes. When scanned by a Czech banking app, the QR
+    code pre-fills all payment details.
+
+    Format::
+
+        SPD*1.0*ACC:<IBAN>*AM:<amount>*CC:CZK*MSG:<message>*X-VS:<variable_symbol>
+
+    Fields:
+        - SPD*1.0: Version identifier
+        - ACC: Bank account in IBAN format
+        - AM: Amount (decimal)
+        - CC: Currency code (CZK)
+        - RN: Recipient name (optional)
+        - MSG: Message/note (optional)
+        - X-VS: Variable symbol for payment matching (optional)
+
+    Methods:
+        generate_spd_string: Create an SPD format string.
+        generate_qr_image: Generate a QR code image from SPD string.
+        generate_for_payment_share: Full generation for a PaymentShare.
+
+    Example:
+        Basic QR code generation::
+
+            spd = SPDPaymentGenerator.generate_spd_string(
+                iban='CZ6508000000192000145399',
+                amount_czk=Decimal('300.00'),
+                variable_symbol='COFFEE-ABC123-4567',
+                message='Coffee purchase',
+                recipient_name='Coffee Group',
+            )
+            # spd = "SPD*1.0*ACC:CZ6508000000192000145399*AM:300.00*CC:CZK*..."
+
+            image = SPDPaymentGenerator.generate_qr_image(spd, 'qr_payment.png')
+
+    Note:
+        Requires the ``qrcode`` library with PIL support.
+        Install with: ``pip install qrcode[pil]``
+
+    See Also:
+        https://qr-platba.cz/pro-vyvojare/specifikace-formatu/
     """
     
     @staticmethod
@@ -220,17 +452,41 @@ class SPDPaymentGenerator:
         recipient_name=''
     ):
         """
-        Generate SPD payment string for QR code.
-        
+        Generate an SPD format payment string for QR code encoding.
+
+        This method creates a properly formatted SPD string that can be
+        encoded into a QR code for Czech banking apps.
+
         Args:
-            iban: Bank account IBAN
-            amount_czk: Payment amount
-            variable_symbol: Payment reference/VS
-            message: Optional payment message
-            recipient_name: Payee name
-        
+            iban (str): Bank account IBAN (e.g., 'CZ6508000000192000145399').
+            amount_czk (Decimal | float): Payment amount in CZK.
+            variable_symbol (str): Payment reference/variable symbol for
+                matching the payment to the correct record.
+            message (str, optional): Payment message or note.
+                Will be sanitized to remove special characters.
+                Defaults to empty string.
+            recipient_name (str, optional): Payee/recipient name for display.
+                Defaults to empty string.
+
         Returns:
-            SPD formatted string
+            str: SPD formatted string ready for QR code generation.
+
+        Example:
+            Generate SPD string::
+
+                spd = SPDPaymentGenerator.generate_spd_string(
+                    iban='CZ6508000000192000145399',
+                    amount_czk=Decimal('299.00'),
+                    variable_symbol='COFFEE-ABC12345-6789',
+                    message='Ethiopia Yirgacheffe purchase',
+                    recipient_name='Coffee Club',
+                )
+                # Result: "SPD*1.0*ACC:CZ6508000000192000145399*AM:299.00*CC:CZK*RN:Coffee Club*MSG:Ethiopia Yirgacheffe purchase*X-VS:COFFEE-ABC12345-6789"
+
+        Note:
+            The message is sanitized to only include alphanumeric characters,
+            spaces, and basic punctuation (- . ,). This is required by the
+            SPD specification.
         """
         parts = [
             'SPD*1.0',
@@ -255,14 +511,42 @@ class SPDPaymentGenerator:
     @staticmethod
     def generate_qr_image(spd_string, output_path=None):
         """
-        Generate QR code image from SPD string.
-        
+        Generate a QR code image from an SPD payment string.
+
+        This method creates a QR code image that can be scanned by Czech
+        banking apps to pre-fill payment information.
+
         Args:
-            spd_string: SPD formatted payment string
-            output_path: File path to save image (optional)
-        
+            spd_string (str): SPD formatted payment string as generated
+                by generate_spd_string().
+            output_path (str, optional): File path to save the QR code image.
+                If provided, saves as PNG and returns the path.
+                If None, returns the PIL Image object.
+                Defaults to None.
+
         Returns:
-            QR code image (PIL Image) or path if output_path provided
+            PIL.Image.Image | str: The QR code as a PIL Image object,
+            or the output file path if output_path was provided.
+
+        Raises:
+            ImportError: If the qrcode library is not installed.
+
+        Example:
+            Generate and save QR code::
+
+                spd = SPDPaymentGenerator.generate_spd_string(...)
+                path = SPDPaymentGenerator.generate_qr_image(spd, 'payment_qr.png')
+                print(f"QR code saved to {path}")
+
+            Generate in-memory::
+
+                spd = SPDPaymentGenerator.generate_spd_string(...)
+                image = SPDPaymentGenerator.generate_qr_image(spd)
+                # Use image directly (e.g., send in HTTP response)
+
+        Note:
+            The QR code uses error correction level M (15% recovery),
+            which provides good balance between size and reliability.
         """
         import qrcode
         from io import BytesIO
@@ -287,15 +571,47 @@ class SPDPaymentGenerator:
     @staticmethod
     def generate_for_payment_share(share, bank_iban, recipient_name=''):
         """
-        Generate QR code for a PaymentShare.
-        
+        Generate a complete QR code for a PaymentShare and update the share.
+
+        This is a convenience method that generates the SPD string, creates
+        the QR code image, saves it to the media directory, and updates the
+        PaymentShare record with the QR information.
+
         Args:
-            share: PaymentShare instance
-            bank_iban: Recipient bank IBAN
-            recipient_name: Recipient name for display
-        
+            share (PaymentShare): The payment share to generate QR for.
+            bank_iban (str): Recipient bank account IBAN.
+            recipient_name (str, optional): Recipient name for display
+                in banking apps. Defaults to empty string.
+
         Returns:
-            SPD string and QR image path
+            tuple: A tuple containing:
+                - str: The SPD formatted payment string.
+                - str: Path to the saved QR code image.
+
+        Side Effects:
+            - Creates QR code image file in MEDIA_ROOT/qr_codes/
+            - Updates share.qr_url with the SPD string
+            - Updates share.qr_image_path with the relative file path
+
+        Example:
+            Generate QR code for a share::
+
+                spd_string, qr_path = SPDPaymentGenerator.generate_for_payment_share(
+                    share=payment_share,
+                    bank_iban='CZ6508000000192000145399',
+                    recipient_name='Coffee Group',
+                )
+                print(f"QR saved to: {qr_path}")
+                print(f"SPD string: {spd_string}")
+
+                # The share is now updated:
+                print(share.qr_url)  # SPD string
+                print(share.qr_image_path)  # 'qr_codes/qr_COFFEE-XXX.png'
+
+        Note:
+            The QR code filename is based on the payment_reference field,
+            ensuring unique filenames for each share. The media directory
+            is created if it doesn't exist.
         """
         from django.conf import settings
         import os

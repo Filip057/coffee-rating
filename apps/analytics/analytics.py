@@ -1,3 +1,40 @@
+"""
+Analytics Module
+=================
+
+This module provides optimized query methods for analytics and statistics.
+It aggregates data from purchases, reviews, and beans to power dashboards,
+charts, and insights.
+
+Classes:
+    AnalyticsQueries: Static methods for various analytics queries.
+
+Key Features:
+    - User consumption tracking (kg, spending)
+    - Group consumption with member breakdown
+    - Top beans rankings by various metrics
+    - Consumption timeseries for charts
+    - User taste profile analysis
+
+Example:
+    Getting user statistics::
+
+        from apps.analytics.analytics import AnalyticsQueries
+
+        # Get user's consumption for last 30 days
+        stats = AnalyticsQueries.user_consumption(
+            user_id=user.id,
+            start_date=date.today() - timedelta(days=30),
+            end_date=date.today(),
+        )
+        print(f"You consumed {stats['total_kg']} kg")
+        print(f"Total spent: {stats['total_spent_czk']} CZK")
+
+Note:
+    This module is read-only and doesn't modify any data. All methods
+    are static and can be called without instantiation.
+"""
+
 from django.db.models import Sum, Count, Avg, F, Q, DecimalField
 from django.db.models.functions import TruncMonth, Coalesce
 from datetime import datetime, timedelta
@@ -8,22 +45,77 @@ from apps.beans.models import CoffeeBean
 
 
 class AnalyticsQueries:
-    """Optimized SQL queries for analytics endpoints."""
+    """
+    Optimized SQL queries for analytics endpoints.
+
+    This class provides static methods for calculating various analytics
+    and statistics from purchases, reviews, and beans data. All methods
+    are optimized to minimize database queries.
+
+    Methods:
+        user_consumption: Calculate user's coffee consumption and spending.
+        group_consumption: Calculate group consumption with member breakdown.
+        top_beans: Get top-ranked beans by various metrics.
+        consumption_timeseries: Get consumption over time for charts.
+        user_taste_profile: Analyze user's taste preferences from reviews.
+
+    Example:
+        Dashboard data aggregation::
+
+            consumption = AnalyticsQueries.user_consumption(user.id)
+            taste = AnalyticsQueries.user_taste_profile(user.id)
+            top = AnalyticsQueries.top_beans(metric='rating', limit=5)
+
+    Note:
+        All methods return plain dictionaries or lists, not Django objects,
+        making them suitable for JSON serialization in API responses.
+    """
     
     @staticmethod
     def user_consumption(user_id, start_date=None, end_date=None):
         """
-        Calculate user's coffee consumption and spending.
-        
+        Calculate a user's coffee consumption and spending statistics.
+
+        This method aggregates data from the user's paid PaymentShares to
+        calculate total weight consumed and money spent. Weight is calculated
+        proportionally based on payment share ratios.
+
+        Args:
+            user_id (UUID): The user's unique identifier.
+            start_date (date, optional): Start of period to analyze.
+                If None, includes all historical data.
+            end_date (date, optional): End of period to analyze.
+                If None, includes up to current date.
+
         Returns:
-            {
-                'total_kg': Decimal,
-                'total_spent_czk': Decimal,
-                'purchases_count': int,
-                'avg_price_per_kg': Decimal,
-                'period_start': date,
-                'period_end': date,
-            }
+            dict: A dictionary containing:
+                - total_kg (Decimal): Total coffee consumed in kilograms.
+                - total_spent_czk (Decimal): Total amount spent in CZK.
+                - purchases_count (int): Number of purchases included.
+                - avg_price_per_kg (Decimal): Average price per kilogram.
+                - period_start (date | None): The start_date parameter.
+                - period_end (date | None): The end_date parameter.
+
+        Example:
+            Get all-time consumption::
+
+                stats = AnalyticsQueries.user_consumption(user.id)
+                print(f"Total: {stats['total_kg']} kg for {stats['total_spent_czk']} CZK")
+
+            Get monthly consumption::
+
+                stats = AnalyticsQueries.user_consumption(
+                    user.id,
+                    start_date=date(2025, 1, 1),
+                    end_date=date(2025, 1, 31),
+                )
+
+        Note:
+            Weight calculation formula:
+            ``user_weight = (user_payment / total_price) * package_weight``
+
+            This ensures that in group purchases, each member's weight share
+            is proportional to their payment share.
         """
         # Base queryset: user's payment shares that are paid
         shares = PaymentShare.objects.filter(
@@ -71,22 +163,39 @@ class AnalyticsQueries:
     @staticmethod
     def group_consumption(group_id, start_date=None, end_date=None):
         """
-        Calculate group's total consumption and per-member breakdown.
-        
+        Calculate a group's total consumption and per-member breakdown.
+
+        This method provides a comprehensive view of a group's coffee
+        consumption, including totals and individual member contributions.
+
+        Args:
+            group_id (UUID): The group's unique identifier.
+            start_date (date, optional): Start of period to analyze.
+            end_date (date, optional): End of period to analyze.
+
         Returns:
-            {
-                'total_kg': Decimal,
-                'total_spent_czk': Decimal,
-                'purchases_count': int,
-                'member_breakdown': [
-                    {
-                        'user': User,
-                        'total_kg': Decimal,
-                        'total_spent_czk': Decimal,
-                        'share_percentage': float,
-                    }
-                ],
-            }
+            dict: A dictionary containing:
+                - total_kg (Decimal): Total coffee consumed by the group.
+                - total_spent_czk (Decimal): Total spent by the group.
+                - purchases_count (int): Number of group purchases.
+                - member_breakdown (list[dict]): Per-member statistics, each containing:
+                    - user (User): The user object.
+                    - total_kg (Decimal): User's portion of consumption.
+                    - total_spent_czk (Decimal): User's total spending.
+                    - share_percentage (float): User's share as percentage of total.
+
+        Example:
+            Get group statistics::
+
+                stats = AnalyticsQueries.group_consumption(group.id)
+                print(f"Group total: {stats['total_kg']} kg")
+                for member in stats['member_breakdown']:
+                    print(f"  {member['user'].email}: {member['share_percentage']}%")
+
+        Note:
+            The member_breakdown includes all current group members, even if
+            they haven't participated in any purchases (they'll have 0 values).
+            This is useful for showing contribution imbalances.
         """
         # Get group purchases
         purchases = PurchaseRecord.objects.filter(group_id=group_id)
@@ -146,14 +255,51 @@ class AnalyticsQueries:
     def top_beans(metric='rating', period_days=30, limit=10):
         """
         Get top-ranked coffee beans by various metrics.
-        
+
+        This method provides flexible bean rankings that can be used for
+        leaderboards, recommendations, and trending beans features.
+
         Args:
-            metric: 'rating', 'kg', 'money', 'reviews'
-            period_days: Last N days (None for all time)
-            limit: Number of results
-        
+            metric (str, optional): The ranking metric. Options:
+                - 'rating': Average review rating (requires min 3 reviews).
+                - 'kg': Total kilograms purchased.
+                - 'money': Total CZK spent on purchases.
+                - 'reviews': Total number of reviews.
+                Defaults to 'rating'.
+            period_days (int | None, optional): Limit to last N days.
+                If None, includes all-time data.
+                Defaults to 30.
+            limit (int, optional): Maximum number of results to return.
+                Defaults to 10.
+
         Returns:
-            List of {bean, score, metadata}
+            list[dict]: List of dictionaries, each containing:
+                - bean (CoffeeBean): The coffee bean object.
+                - score (float): The ranking score (varies by metric).
+                - metric (str): Human-readable metric name.
+                - Additional metric-specific fields (review_count, avg_rating,
+                  total_kg, total_spent_czk).
+
+        Raises:
+            ValueError: If an invalid metric is specified.
+
+        Example:
+            Top beans by rating::
+
+                top_rated = AnalyticsQueries.top_beans(metric='rating', limit=5)
+                for item in top_rated:
+                    print(f"{item['bean'].name}: {item['score']} stars")
+
+            Most purchased beans this month::
+
+                top_kg = AnalyticsQueries.top_beans(metric='kg', period_days=30)
+                for item in top_kg:
+                    print(f"{item['bean'].name}: {item['total_kg']} kg")
+
+        Note:
+            For 'rating' metric, beans must have at least 3 reviews to be
+            included. This prevents single 5-star reviews from dominating
+            the leaderboard.
         """
         cutoff_date = None
         if period_days:
@@ -255,15 +401,48 @@ class AnalyticsQueries:
     @staticmethod
     def consumption_timeseries(user_id=None, group_id=None, granularity='month'):
         """
-        Get consumption over time (for charts).
-        
+        Get consumption data over time for chart visualizations.
+
+        This method generates time-series data suitable for line charts,
+        bar charts, or other temporal visualizations of consumption patterns.
+
         Args:
-            user_id: User UUID (required if not group)
-            group_id: Group UUID (required if not user)
-            granularity: 'day', 'week', 'month'
-        
+            user_id (UUID, optional): The user's unique identifier.
+                Required if group_id is not provided.
+            group_id (UUID, optional): The group's unique identifier.
+                Required if user_id is not provided.
+            granularity (str, optional): Time period grouping.
+                Currently only 'month' is implemented.
+                Defaults to 'month'.
+
         Returns:
-            List of {period, kg, czk, purchases_count}
+            list[dict]: List of dictionaries, each containing:
+                - period (str): Period label (e.g., '2025-01' for months).
+                - kg (Decimal): Coffee consumed in this period.
+                - czk (Decimal): Amount spent in this period.
+                - purchases_count (int): Number of purchases in this period.
+
+        Raises:
+            ValueError: If neither user_id nor group_id is provided.
+
+        Example:
+            User's monthly consumption::
+
+                data = AnalyticsQueries.consumption_timeseries(user_id=user.id)
+                for point in data:
+                    print(f"{point['period']}: {point['kg']} kg, {point['czk']} CZK")
+                # Output:
+                # 2025-01: 0.5 kg, 450.00 CZK
+                # 2025-02: 0.75 kg, 650.00 CZK
+
+            Group's monthly consumption::
+
+                data = AnalyticsQueries.consumption_timeseries(group_id=group.id)
+
+        Note:
+            For user timeseries, only PAID payment shares are included.
+            For group timeseries, all purchases are included regardless
+            of payment status.
         """
         if user_id:
             # User's paid shares
@@ -344,16 +523,47 @@ class AnalyticsQueries:
     @staticmethod
     def user_taste_profile(user_id):
         """
-        Analyze user's taste preferences from reviews.
-        
+        Analyze a user's taste preferences based on their reviews.
+
+        This method aggregates data from all of a user's reviews to build
+        a profile of their taste preferences, including favorite flavors,
+        preferred roast levels, and favorite origins.
+
+        Args:
+            user_id (UUID): The user's unique identifier.
+
         Returns:
-            {
-                'favorite_tags': [{'tag': str, 'count': int}],
-                'avg_rating': float,
-                'preferred_roast': str,
-                'preferred_origin': str,
-                'review_count': int,
-            }
+            dict | None: A dictionary containing taste preferences, or None
+            if the user has no reviews. Dictionary contains:
+                - favorite_tags (list[dict]): Top 10 taste tags, each with:
+                    - tag (str): Tag name.
+                    - count (int): Number of times used in reviews.
+                - avg_rating (float): User's average rating across all reviews.
+                - preferred_roast (str | None): Most common roast profile in
+                  reviewed beans.
+                - preferred_origin (str | None): Most common origin country in
+                  reviewed beans.
+                - review_count (int): Total number of reviews by this user.
+
+        Example:
+            Get user preferences::
+
+                profile = AnalyticsQueries.user_taste_profile(user.id)
+                if profile:
+                    print(f"Reviews: {profile['review_count']}")
+                    print(f"Average rating: {profile['avg_rating']}")
+                    print(f"Favorite roast: {profile['preferred_roast']}")
+                    print(f"Favorite origin: {profile['preferred_origin']}")
+                    print("Top flavor tags:")
+                    for tag in profile['favorite_tags'][:5]:
+                        print(f"  - {tag['tag']}: {tag['count']} times")
+                else:
+                    print("No reviews yet")
+
+        Note:
+            Returns None (not an empty dict) if the user has no reviews.
+            This allows the caller to easily distinguish between "no data"
+            and "data with zero values".
         """
         from apps.reviews.models import Tag
         
