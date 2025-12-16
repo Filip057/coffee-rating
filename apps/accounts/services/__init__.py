@@ -9,8 +9,10 @@ from .exceptions import (
     UserNotFoundError,
     PasswordConfirmationError,
 )
+from .user_registration import register_user
 
 __all__ = [
+    # Exceptions
     'AccountsServiceError',
     'UserRegistrationError',
     'InvalidCredentialsError',
@@ -18,4 +20,6 @@ __all__ = [
     'InvalidTokenError',
     'UserNotFoundError',
     'PasswordConfirmationError',
+    # Services
+    'register_user',
 ]
