@@ -14,7 +14,13 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
-from .services import register_user, UserRegistrationError
+from .services import (
+    register_user,
+    authenticate_user,
+    UserRegistrationError,
+    InvalidCredentialsError,
+    InactiveAccountError,
+)
 import secrets
 
 
@@ -108,33 +114,27 @@ def register(request):
 def login(request):
     """Login with email and password."""
     serializer = UserLoginSerializer(data=request.data)
-    
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    email = serializer.validated_data['email']
-    password = serializer.validated_data['password']
-    
-    # Authenticate user
-    user = authenticate(request, username=email, password=password)
-    
-    if user is None:
-        return Response({
-            'error': 'Invalid credentials'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    
-    if not user.is_active:
-        return Response({
-            'error': 'Account is deactivated'
-        }, status=status.HTTP_403_FORBIDDEN)
-    
-    # Update last login
-    user.last_login = timezone.now()
-    user.save(update_fields=['last_login'])
-    
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        user = authenticate_user(
+            email=serializer.validated_data['email'],
+            password=serializer.validated_data['password']
+        )
+    except InvalidCredentialsError:
+        return Response(
+            {'error': 'Invalid credentials'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    except InactiveAccountError:
+        return Response(
+            {'error': 'Account is deactivated'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+
     # Generate tokens
     refresh = RefreshToken.for_user(user)
-    
+
     return Response({
         'message': 'Login successful',
         'user': UserSerializer(user).data,
