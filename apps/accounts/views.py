@@ -3,6 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -17,9 +18,16 @@ from .serializers import (
 from .services import (
     register_user,
     authenticate_user,
+    request_password_reset as request_reset_service,
+    confirm_password_reset as confirm_reset_service,
+    verify_user_email,
+    delete_user_account,
     UserRegistrationError,
     InvalidCredentialsError,
     InactiveAccountError,
+    InvalidTokenError,
+    UserNotFoundError,
+    PasswordConfirmationError,
 )
 import secrets
 
@@ -164,11 +172,11 @@ def logout(request):
             token = RefreshToken(refresh_token)
             # Note: Requires djangorestframework-simplejwt[blacklist]
             # token.blacklist()
-        
+
         return Response({
             'message': 'Logout successful'
         })
-    except Exception as e:
+    except TokenError:
         return Response({
             'error': 'Invalid token'
         }, status=status.HTTP_400_BAD_REQUEST)
@@ -220,33 +228,24 @@ def update_profile(request):
 def request_password_reset(request):
     """Request password reset email."""
     serializer = PasswordResetRequestSerializer(data=request.data)
-    
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    email = serializer.validated_data['email']
-    
+    serializer.is_valid(raise_exception=True)
+
     try:
-        user = User.objects.get(email=email, is_active=True)
-        
-        # Generate reset token
-        reset_token = secrets.token_urlsafe(32)
-        user.verification_token = reset_token
-        user.save(update_fields=['verification_token'])
-        
-        # Send email (implement email sending)
-        # send_password_reset_email(user, reset_token)
-        
+        reset_token = request_reset_service(
+            email=serializer.validated_data['email']
+        )
+
         return Response({
             'message': 'Password reset email sent',
             'token': reset_token  # Remove in production!
         })
-    
-    except User.DoesNotExist:
+    except UserNotFoundError:
         # Don't reveal if email exists (security)
-        return Response({
-            'message': 'If account exists, password reset email has been sent'
-        })
+        pass
+
+    return Response({
+        'message': 'If account exists, password reset email has been sent'
+    })
 
 
 @extend_schema(
@@ -263,29 +262,22 @@ def request_password_reset(request):
 def confirm_password_reset(request):
     """Confirm password reset with token."""
     serializer = PasswordResetConfirmSerializer(data=request.data)
-    
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    token = serializer.validated_data['token']
-    new_password = serializer.validated_data['new_password']
-    
+    serializer.is_valid(raise_exception=True)
+
     try:
-        user = User.objects.get(verification_token=token, is_active=True)
-        
-        # Set new password
-        user.set_password(new_password)
-        user.verification_token = None
-        user.save(update_fields=['password', 'verification_token'])
-        
+        confirm_reset_service(
+            token=serializer.validated_data['token'],
+            new_password=serializer.validated_data['new_password']
+        )
+
         return Response({
             'message': 'Password reset successful'
         })
-    
-    except User.DoesNotExist:
-        return Response({
-            'error': 'Invalid or expired reset token'
-        }, status=status.HTTP_400_BAD_REQUEST)
+    except InvalidTokenError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 @extend_schema(
@@ -302,20 +294,21 @@ def confirm_password_reset(request):
 def verify_email(request):
     """Verify email with token."""
     token = request.data.get('token')
-    user = request.user
-    
-    if user.verification_token == token:
-        user.email_verified = True
-        user.verification_token = None
-        user.save(update_fields=['email_verified', 'verification_token'])
-        
+
+    try:
+        verify_user_email(
+            user_id=request.user.id,
+            token=token
+        )
+
         return Response({
             'message': 'Email verified successfully'
         })
-    
-    return Response({
-        'error': 'Invalid verification token'
-    }, status=status.HTTP_400_BAD_REQUEST)
+    except InvalidTokenError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 @extend_schema(
@@ -334,24 +327,26 @@ def delete_account(request):
     """GDPR-compliant account deletion (anonymization)."""
     password = request.data.get('password')
     confirm = request.data.get('confirm')
-    
+
     if not confirm:
         return Response({
             'error': 'Confirmation required'
         }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Verify password
-    if not request.user.check_password(password):
+
+    try:
+        delete_user_account(
+            user_id=request.user.id,
+            password=password
+        )
+
         return Response({
-            'error': 'Invalid password'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    
-    # Anonymize user data (GDPR)
-    request.user.anonymize()
-    
-    return Response({
-        'message': 'Account deleted successfully'
-    }, status=status.HTTP_204_NO_CONTENT)
+            'message': 'Account deleted successfully'
+        }, status=status.HTTP_204_NO_CONTENT)
+    except PasswordConfirmationError:
+        return Response(
+            {'error': 'Invalid password'},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
 class UserDetailView(generics.RetrieveAPIView):
