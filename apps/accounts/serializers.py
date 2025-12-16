@@ -51,25 +51,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 'password_confirm': 'Passwords do not match'
             })
         return attrs
-    
-    def create(self, validated_data):
-        """Create user with hashed password."""
-        validated_data.pop('password_confirm')
-        
-        user = User.objects.create_user(
-            email=validated_data['email'],
-            password=validated_data['password'],
-            display_name=validated_data.get('display_name', '')
-        )
-        
-        # Generate verification token
-        import secrets
-        user.verification_token = secrets.token_urlsafe(32)
-        user.save(update_fields=['verification_token'])
-        
-        # TODO: Send verification email
-        
-        return user
 
 
 class UserLoginSerializer(serializers.Serializer):

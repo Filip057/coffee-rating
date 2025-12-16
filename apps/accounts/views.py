@@ -14,6 +14,7 @@ from .serializers import (
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
 )
+from .services import register_user, UserRegistrationError
 import secrets
 
 
@@ -64,23 +65,31 @@ class DeleteAccountRequestSerializer(serializers.Serializer):
 def register(request):
     """Register a new user account."""
     serializer = UserRegistrationSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        user = serializer.save()
-        
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'message': 'Registration successful. Please verify your email.',
-            'user': UserSerializer(user).data,
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-        }, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.is_valid(raise_exception=True)
+
+    # Remove password_confirm before passing to service
+    data = serializer.validated_data.copy()
+    data.pop('password_confirm', None)
+
+    try:
+        user = register_user(**data)
+    except UserRegistrationError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+
+    return Response({
+        'message': 'Registration successful. Please verify your email.',
+        'user': UserSerializer(user).data,
+        'tokens': {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+    }, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(
