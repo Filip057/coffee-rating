@@ -185,6 +185,87 @@ def anonymize(self):
 
 ---
 
+## Services Layer Architecture
+
+**Purpose:** The accounts app follows DRF best practices with a dedicated services layer that separates business logic from view logic.
+
+### Service Structure
+
+```
+apps/accounts/services/
+├── __init__.py                    # Service exports
+├── exceptions.py                  # Domain-specific exceptions
+├── user_registration.py           # Registration logic
+├── user_authentication.py         # Authentication logic
+├── password_reset.py              # Password reset workflows
+├── email_verification.py          # Email verification
+└── account_management.py          # Account deletion/management
+```
+
+### Service Files
+
+**user_registration.py**
+- `register_user(email, password, display_name)` - User registration with transaction safety
+
+**user_authentication.py**
+- `authenticate_user(email, password)` - Authentication with concurrency protection
+
+**password_reset.py**
+- `request_password_reset(email)` - Generate reset token
+- `confirm_password_reset(token, new_password)` - Apply password reset
+
+**email_verification.py**
+- `verify_user_email(user_id, token)` - Verify email with token
+
+**account_management.py**
+- `delete_user_account(user_id, password)` - GDPR-compliant deletion
+
+**exceptions.py**
+- Domain-specific exceptions for service layer errors
+- `UserRegistrationError`, `InvalidCredentialsError`, `InactiveAccountError`
+- `InvalidTokenError`, `UserNotFoundError`, `PasswordConfirmationError`
+
+### Transaction Safety
+
+All state-changing operations are wrapped in `@transaction.atomic` decorators to ensure data consistency:
+- User registration
+- Password reset (request and confirm)
+- Email verification
+- Account deletion
+- Login (last_login update)
+
+### Concurrency Protection
+
+Critical operations use `select_for_update()` to prevent race conditions:
+- Login (prevents concurrent last_login updates)
+- Password reset request (prevents token race conditions)
+- Password reset confirm (ensures atomic password change)
+- Email verification (prevents concurrent verification)
+- Account deletion (ensures safe anonymization)
+
+### Architecture Benefits
+
+1. **Clear separation of concerns**
+   - Services contain business logic
+   - Views handle HTTP-only concerns
+   - Serializers only validate input
+
+2. **Testability**
+   - Services can be unit tested independently
+   - Views can be tested with mocked services
+   - Clear boundaries for integration tests
+
+3. **Reusability**
+   - Services can be called from views, management commands, or tasks
+   - Business logic is not coupled to HTTP layer
+
+4. **Maintainability**
+   - Changes to business logic don't affect view code
+   - Easy to understand and extend
+   - Well-documented with type hints
+
+---
+
 ## Permissions & Security
 
 **Permission Classes:**
