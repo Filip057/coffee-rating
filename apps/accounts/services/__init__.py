@@ -10,6 +10,7 @@ from .exceptions import (
     PasswordConfirmationError,
 )
 from .user_registration import register_user
+from .user_authentication import authenticate_user
 
 __all__ = [
     # Exceptions
@@ -22,4 +23,5 @@ __all__ = [
     'PasswordConfirmationError',
     # Services
     'register_user',
+    'authenticate_user',
 ]
