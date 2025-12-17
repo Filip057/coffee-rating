@@ -47,7 +47,18 @@ Main page is about frontend, it will use just proper api endpoint
 - add beans package to group
 - add review to shared bean package 
 - create shared expenses
+- who can see details about group - only members
 
-**Analytics** 
+**Roasteries**
+- adding roastery
+- list of all 
+
+
+**Analytics**  
 This must be design yet 
+
+**Purchases**
+App for splitting expenses among members of some group  
+If user has bank account, it can generate qr code  
+Track users debt, who own who and how much, mark paid debts  
 
