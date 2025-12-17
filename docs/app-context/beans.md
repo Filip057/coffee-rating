@@ -215,6 +215,184 @@ def save(self, *args, **kwargs):
 
 ---
 
+## Services Layer Architecture
+
+**Purpose:** The beans app follows DRF best practices with a modular services layer that separates business logic from view logic.
+
+### Service Structure
+
+```
+apps/beans/services/
+├── __init__.py                   # Service exports and public API
+├── exceptions.py                 # Domain-specific exceptions
+├── bean_management.py            # Bean CRUD operations
+├── bean_search.py                # Search and filtering logic
+├── bean_deduplication.py         # Duplicate detection with fuzzy matching
+├── bean_merging.py               # Bean merge operations
+├── variant_management.py         # Variant CRUD operations
+└── rating_aggregation.py         # Rating calculations
+```
+
+### Service Files
+
+**bean_management.py** - Bean CRUD Operations
+- `create_bean()` - Create with duplicate checking and transaction safety
+- `update_bean()` - Update with select_for_update() concurrency protection
+- `soft_delete_bean()` - Soft delete with transaction wrapper
+- `get_bean_by_id()` - Retrieve with proper prefetch_related optimization
+
+**bean_search.py** - Search and Filtering
+- `search_beans()` - Multi-field search (name, roastery, origin, description, tasting notes)
+- `get_all_roasteries()` - Get unique roastery names for filter dropdowns
+- `get_all_origins()` - Get unique origin countries for filter dropdowns
+
+**bean_deduplication.py** - Duplicate Detection
+- `normalize_text()` - Text normalization for comparison
+- `find_potential_duplicates()` - Fuzzy matching (exact, fuzzy_name, fuzzy_both)
+  - Uses fuzzywuzzy library for similarity scoring
+  - Thresholds: EXACT (100), HIGH (90), MEDIUM (80)
+- `batch_find_duplicates()` - Database-wide duplicate scan for admin cleanup
+
+**bean_merging.py** - Merge Operations
+- `merge_beans()` - Atomic merge with full transaction and concurrency safety
+  - Locks both beans with select_for_update()
+  - Moves variants (keeps cheaper prices)
+  - Migrates reviews, purchases, library entries
+  - Handles duplicate library entries intelligently
+  - Creates MergeHistory audit record
+  - Soft deletes source bean
+
+**variant_management.py** - Variant Operations
+- `create_variant()` - Create with duplicate checking
+- `update_variant()` - Update with concurrency protection
+- `soft_delete_variant()` - Soft delete with transaction
+
+**rating_aggregation.py** - Rating Calculations
+- `update_bean_rating()` - Recalculate with select_for_update() **prevents race conditions**
+- `get_top_rated_beans()` - Top beans by rating (with minimum review threshold)
+- `get_most_reviewed_beans()` - Most reviewed beans
+
+**exceptions.py** - Domain Exceptions
+- `BeansServiceError` (base exception)
+- `BeanNotFoundError` - Bean doesn't exist
+- `DuplicateBeanError` - Bean already exists
+- `BeanMergeError` - Merge operation failed
+- `InvalidMergeError` - Invalid merge parameters
+- `VariantNotFoundError` - Variant doesn't exist
+- `DuplicateVariantError` - Variant already exists
+
+### Transaction Safety
+
+All state-changing operations are wrapped in `@transaction.atomic` decorators:
+- Bean creation (create_bean)
+- Bean updates (update_bean)
+- Bean soft deletion (soft_delete_bean)
+- Variant creation (create_variant)
+- Variant updates (update_variant)
+- Variant soft deletion (soft_delete_variant)
+- Rating aggregation (update_bean_rating) ⚠️ **CRITICAL**
+- Bean merging (merge_beans) ⚠️ **CRITICAL**
+
+### Concurrency Protection
+
+Critical operations use `select_for_update()` to prevent race conditions:
+
+**Rating Updates** - Prevents concurrent rating conflicts
+```python
+@transaction.atomic
+def update_bean_rating(*, bean_id: UUID) -> CoffeeBean:
+    # Lock bean to prevent concurrent updates
+    bean = CoffeeBean.objects.select_for_update().get(id=bean_id)
+    # Calculate and update ratings safely
+```
+
+**Bean Merging** - Locks both beans during merge
+```python
+@transaction.atomic
+def merge_beans(*, source_bean_id, target_bean_id, ...):
+    # Lock both beans
+    source = CoffeeBean.objects.select_for_update().get(id=source_bean_id)
+    target = CoffeeBean.objects.select_for_update().get(id=target_bean_id)
+    # Perform merge atomically
+```
+
+**Bean Updates** - Prevents concurrent modifications
+```python
+@transaction.atomic
+def update_bean(*, bean_id: UUID, data: Dict):
+    bean = CoffeeBean.objects.select_for_update().get(id=bean_id)
+    # Update safely
+```
+
+### Architecture Benefits
+
+1. **Clear Separation of Concerns**
+   - Services contain all business logic
+   - Views handle only HTTP concerns (request/response)
+   - Serializers only validate input data
+   - Models enforce domain rules only
+
+2. **Testability**
+   - Services can be unit tested independently
+   - Views can be tested with mocked services
+   - Clear boundaries for integration tests
+
+3. **Reusability**
+   - Services can be called from:
+     - Views (current usage)
+     - Management commands (CLI tools)
+     - Celery tasks (async processing)
+     - Admin actions (bulk operations)
+
+4. **Safety**
+   - Transaction protection prevents partial updates
+   - Concurrency protection prevents race conditions
+   - Domain exceptions provide clear error handling
+
+5. **Maintainability**
+   - Changes to business logic don't affect views
+   - Easy to understand and extend
+   - Well-documented with type hints
+
+### Code Quality Improvements
+
+**Before Refactoring:**
+- Views contained 40+ lines of filtering logic
+- No transaction safety on operations
+- No concurrency protection on rating updates
+- Generic exception handling
+- Business logic scattered across views, models, and services
+
+**After Refactoring:**
+- Views reduced to thin HTTP handlers
+- All mutations transaction-protected
+- Race conditions eliminated with select_for_update()
+- Domain-specific exception hierarchy
+- Business logic centralized in modular services
+
+### Usage Example
+
+```python
+# In views.py
+from .services import create_bean, DuplicateBeanError
+
+def create(self, request, *args, **kwargs):
+    serializer = self.get_serializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        bean = create_bean(
+            created_by=request.user,
+            **serializer.validated_data
+        )
+    except DuplicateBeanError as e:
+        return Response({'error': str(e)}, status=400)
+
+    return Response(CoffeeBeanSerializer(bean).data, status=201)
+```
+
+---
+
 ## Business Logic & Workflows
 
 ### **Workflow 1: Bean Creation**
