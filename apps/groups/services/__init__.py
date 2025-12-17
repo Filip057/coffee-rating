@@ -37,11 +37,11 @@ from .membership_management import (
 from .role_management import (
     update_member_role,
 )
-#
-# from .invite_management import (
-#     regenerate_invite_code,
-#     validate_invite_code,
-# )
+
+from .invite_management import (
+    regenerate_invite_code,
+    validate_invite_code,
+)
 #
 # from .library_management import (
 #     add_to_library,
@@ -82,8 +82,8 @@ __all__ = [
     'update_member_role',
 
     # Invite Management (Phase 5)
-    # 'regenerate_invite_code',
-    # 'validate_invite_code',
+    'regenerate_invite_code',
+    'validate_invite_code',
 
     # Library Management (Phase 6)
     # 'add_to_library',
