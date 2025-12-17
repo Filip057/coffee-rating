@@ -4,7 +4,6 @@
 
 from django.db import models
 import uuid
-import secrets
 from apps.beans.models import CoffeeBean
 
 class GroupRole(models.TextChoices):
@@ -35,17 +34,7 @@ class Group(models.Model):
     
     def __str__(self):
         return self.name
-    
-    def save(self, *args, **kwargs):
-        if not self.invite_code:
-            self.invite_code = secrets.token_urlsafe(12)[:16]
-        super().save(*args, **kwargs)
-    
-    def regenerate_invite_code(self):
-        self.invite_code = secrets.token_urlsafe(12)[:16]
-        self.save(update_fields=['invite_code', 'updated_at'])
-        return self.invite_code
-    
+
     def has_member(self, user):
         return self.memberships.filter(user=user).exists()
     
@@ -80,11 +69,6 @@ class GroupMembership(models.Model):
     
     def __str__(self):
         return f"{self.user.get_display_name()} in {self.group.name} ({self.role})"
-    
-    def save(self, *args, **kwargs):
-        if self.group.owner_id == self.user_id:
-            self.role = GroupRole.OWNER
-        super().save(*args, **kwargs)
 
 
 class GroupLibraryEntry(models.Model):
