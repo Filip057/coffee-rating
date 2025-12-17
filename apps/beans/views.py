@@ -3,13 +3,25 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from django.db.models import Q
 from .models import CoffeeBean, CoffeeBeanVariant
 from .serializers import (
     CoffeeBeanSerializer,
     CoffeeBeanCreateSerializer,
     CoffeeBeanListSerializer,
     CoffeeBeanVariantSerializer,
+)
+from .services import (
+    create_bean,
+    soft_delete_bean,
+    search_beans,
+    get_all_roasteries,
+    get_all_origins,
+    create_variant,
+    soft_delete_variant,
+    DuplicateBeanError,
+    BeanNotFoundError,
+    DuplicateVariantError,
+    VariantNotFoundError,
 )
 
 
@@ -40,7 +52,7 @@ class CoffeeBeanViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """
         Filter beans based on query parameters.
-        
+
         Filters:
         - search: Search in name, roastery, origin, description
         - roastery: Filter by roastery name
@@ -49,45 +61,14 @@ class CoffeeBeanViewSet(viewsets.ModelViewSet):
         - processing: Filter by processing method
         - min_rating: Minimum average rating
         """
-        queryset = super().get_queryset()
-        
-        # Search
-        search = self.request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                Q(name__icontains=search) |
-                Q(roastery_name__icontains=search) |
-                Q(origin_country__icontains=search) |
-                Q(description__icontains=search) |
-                Q(tasting_notes__icontains=search)
-            )
-        
-        # Filter by roastery
-        roastery = self.request.query_params.get('roastery')
-        if roastery:
-            queryset = queryset.filter(roastery_name__icontains=roastery)
-        
-        # Filter by origin
-        origin = self.request.query_params.get('origin')
-        if origin:
-            queryset = queryset.filter(origin_country__icontains=origin)
-        
-        # Filter by roast profile
-        roast_profile = self.request.query_params.get('roast_profile')
-        if roast_profile:
-            queryset = queryset.filter(roast_profile=roast_profile)
-        
-        # Filter by processing
-        processing = self.request.query_params.get('processing')
-        if processing:
-            queryset = queryset.filter(processing=processing)
-        
-        # Filter by minimum rating
-        min_rating = self.request.query_params.get('min_rating')
-        if min_rating:
-            queryset = queryset.filter(avg_rating__gte=min_rating)
-        
-        return queryset.distinct()
+        return search_beans(
+            search=self.request.query_params.get('search'),
+            roastery=self.request.query_params.get('roastery'),
+            origin=self.request.query_params.get('origin'),
+            roast_profile=self.request.query_params.get('roast_profile'),
+            processing=self.request.query_params.get('processing'),
+            min_rating=self.request.query_params.get('min_rating'),
+        )
     
     def get_serializer_class(self):
         """Use different serializers for different actions."""
@@ -97,35 +78,53 @@ class CoffeeBeanViewSet(viewsets.ModelViewSet):
             return CoffeeBeanCreateSerializer
         return CoffeeBeanSerializer
     
-    def perform_create(self, serializer):
-        """Set created_by to current user."""
-        serializer.save(created_by=self.request.user)
+    def create(self, request, *args, **kwargs):
+        """Create a new coffee bean."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            bean = create_bean(
+                created_by=request.user,
+                **serializer.validated_data
+            )
+        except DuplicateBeanError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        output_serializer = CoffeeBeanSerializer(bean)
+        return Response(
+            output_serializer.data,
+            status=status.HTTP_201_CREATED
+        )
     
-    def perform_destroy(self, instance):
-        """Soft delete - set is_active to False instead of deleting."""
-        instance.is_active = False
-        instance.save(update_fields=['is_active'])
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete a bean."""
+        bean_id = kwargs.get('pk')
+
+        try:
+            soft_delete_bean(bean_id=bean_id)
+        except BeanNotFoundError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=False, methods=['get'])
     def roasteries(self, request):
         """Get list of all roasteries."""
-        roasteries = CoffeeBean.objects.filter(
-            is_active=True
-        ).values_list('roastery_name', flat=True).distinct().order_by('roastery_name')
-        
-        return Response(list(roasteries))
-    
+        roasteries = get_all_roasteries()
+        return Response(roasteries)
+
     @action(detail=False, methods=['get'])
     def origins(self, request):
         """Get list of all origin countries."""
-        origins = CoffeeBean.objects.filter(
-            is_active=True,
-            origin_country__isnull=False
-        ).exclude(
-            origin_country=''
-        ).values_list('origin_country', flat=True).distinct().order_by('origin_country')
-        
-        return Response(list(origins))
+        origins = get_all_origins()
+        return Response(origins)
 
 
 class CoffeeBeanVariantViewSet(viewsets.ModelViewSet):
@@ -149,7 +148,35 @@ class CoffeeBeanVariantViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    def perform_destroy(self, instance):
-        """Soft delete - set is_active to False."""
-        instance.is_active = False
-        instance.save(update_fields=['is_active'])
+    def create(self, request, *args, **kwargs):
+        """Create a new variant."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            variant = create_variant(**serializer.validated_data)
+        except (BeanNotFoundError, DuplicateVariantError) as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        output_serializer = CoffeeBeanVariantSerializer(variant)
+        return Response(
+            output_serializer.data,
+            status=status.HTTP_201_CREATED
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft delete a variant."""
+        variant_id = kwargs.get('pk')
+
+        try:
+            soft_delete_variant(variant_id=variant_id)
+        except VariantNotFoundError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
