@@ -18,12 +18,12 @@ from .review_management import (
 )
 
 # Phase 3: Library Management
-# from .library_management import (
-#     add_to_library,
-#     remove_from_library,
-#     archive_library_entry,
-#     get_user_library,
-# )
+from .library_management import (
+    add_to_library,
+    remove_from_library,
+    archive_library_entry,
+    get_user_library,
+)
 
 # Phase 4: Tag Management
 # from .tag_management import (
@@ -60,6 +60,11 @@ __all__ = [
     'update_review',
     'delete_review',
     'get_user_reviews',
+    # Library Management Services
+    'add_to_library',
+    'remove_from_library',
+    'archive_library_entry',
+    'get_user_library',
     # Exceptions
     'ReviewsServiceError',
     'ReviewNotFoundError',
