@@ -3,10 +3,9 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from django.db import transaction
-from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
-from .models import Group, GroupMembership, GroupLibraryEntry, GroupRole
+
+from .models import Group
 from .serializers import (
     GroupSerializer,
     GroupCreateSerializer,
@@ -16,8 +15,31 @@ from .serializers import (
     JoinGroupSerializer,
     UpdateMemberRoleSerializer,
 )
-from .permissions import IsGroupAdmin, IsGroupMember
-from apps.beans.models import CoffeeBean
+from .permissions import IsGroupAdmin
+
+from apps.groups.services import (
+    create_group,
+    delete_group,
+    join_group,
+    leave_group,
+    remove_member,
+    get_group_members,
+    update_member_role,
+    regenerate_invite_code,
+    add_to_library,
+    get_group_library,
+    # Exceptions
+    GroupsServiceError,
+    InvalidInviteCodeError,
+    AlreadyMemberError,
+    NotMemberError,
+    OwnerCannotLeaveError,
+    CannotRemoveOwnerError,
+    InsufficientPermissionsError,
+    DuplicateLibraryEntryError,
+    BeanNotFoundError,
+    CannotChangeOwnerRoleError,
+)
 
 
 class GroupPagination(PageNumberPagination):
@@ -30,7 +52,10 @@ class GroupPagination(PageNumberPagination):
 class GroupViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Group CRUD operations.
-    
+
+    All business logic is handled by services.
+    Views are thin HTTP handlers only.
+
     list: Get all groups (user is member of)
     create: Create a new group
     retrieve: Get a specific group
@@ -38,19 +63,19 @@ class GroupViewSet(viewsets.ModelViewSet):
     partial_update: Partially update a group (admin only)
     destroy: Delete a group (owner only)
     """
-    
+
     queryset = Group.objects.select_related('owner').prefetch_related('memberships')
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = GroupPagination
-    
+
     def get_queryset(self):
         """Return only groups where user is a member."""
         user = self.request.user
         return Group.objects.filter(
             memberships__user=user
         ).select_related('owner').prefetch_related('memberships').distinct()
-    
+
     def get_serializer_class(self):
         """Use different serializers for different actions."""
         if self.action == 'list':
@@ -58,305 +83,163 @@ class GroupViewSet(viewsets.ModelViewSet):
         elif self.action == 'create':
             return GroupCreateSerializer
         return GroupSerializer
-    
+
     def get_permissions(self):
         """Set permissions based on action."""
-        if self.action in ['update', 'partial_update']:
-            return [IsAuthenticated(), IsGroupAdmin()]
-        elif self.action == 'destroy':
+        if self.action in ['update', 'partial_update', 'destroy']:
             return [IsAuthenticated(), IsGroupAdmin()]
         return [IsAuthenticated()]
-    
-    @transaction.atomic
-    def perform_create(self, serializer):
-        """
-        Create group and add creator as owner.
-        """
-        group = serializer.save(owner=self.request.user)
-        
-        # Add creator as owner member
-        GroupMembership.objects.create(
-            user=self.request.user,
-            group=group,
-            role=GroupRole.OWNER
+
+    def create(self, request, *args, **kwargs):
+        """Create a new group."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        group = create_group(
+            name=serializer.validated_data['name'],
+            owner=request.user,
+            description=serializer.validated_data.get('description', ''),
+            is_private=serializer.validated_data.get('is_private', True)
         )
-    
-    def perform_destroy(self, instance):
-        """Delete group (owner only)."""
-        if instance.owner != self.request.user:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only the group owner can delete the group")
-        instance.delete()
-    
+
+        output_serializer = GroupSerializer(group, context={'request': request})
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """Delete a group."""
+        try:
+            delete_group(group_id=self.kwargs['pk'], user=request.user)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except InsufficientPermissionsError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+
     @action(detail=True, methods=['get'])
     def members(self, request, pk=None):
-        """
-        Get all members of the group.
-        
-        GET /api/groups/{id}/members/
-        """
-        group = self.get_object()
-        memberships = group.memberships.select_related('user').order_by('-role', 'joined_at')
+        """Get all members of the group."""
+        memberships = get_group_members(group_id=pk)
         serializer = GroupMemberSerializer(memberships, many=True)
         return Response(serializer.data)
-    
+
     @action(detail=True, methods=['post'])
     def join(self, request, pk=None):
-        """
-        Join a group using invite code.
-        
-        POST /api/groups/{id}/join/
-        Body: {"invite_code": "abc123"}
-        """
-        group = self.get_object()
+        """Join a group using invite code."""
         serializer = JoinGroupSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        invite_code = serializer.validated_data['invite_code']
-        
-        # Verify invite code
-        if group.invite_code != invite_code:
-            return Response(
-                {'error': 'Invalid invite code'},
-                status=status.HTTP_400_BAD_REQUEST
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            membership = join_group(
+                group_id=pk,
+                user=request.user,
+                invite_code=serializer.validated_data['invite_code']
             )
-        
-        # Check if already a member
-        if group.has_member(request.user):
-            return Response(
-                {'error': 'You are already a member of this group'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Add user as member
-        membership = GroupMembership.objects.create(
-            user=request.user,
-            group=group,
-            role=GroupRole.MEMBER
-        )
-        
-        return Response(
-            GroupMemberSerializer(membership).data,
-            status=status.HTTP_201_CREATED
-        )
-    
+        except (InvalidInviteCodeError, AlreadyMemberError) as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        output_serializer = GroupMemberSerializer(membership)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
     @action(detail=True, methods=['post'])
     def leave(self, request, pk=None):
-        """
-        Leave a group.
-        
-        POST /api/groups/{id}/leave/
-        """
-        group = self.get_object()
-        
-        # Owner cannot leave their own group
-        if group.owner == request.user:
-            return Response(
-                {'error': 'Group owner cannot leave. Transfer ownership or delete the group.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Check if member
+        """Leave a group."""
         try:
-            membership = GroupMembership.objects.get(user=request.user, group=group)
-            membership.delete()
+            leave_group(group_id=pk, user=request.user)
             return Response(
                 {'message': 'Successfully left the group'},
                 status=status.HTTP_204_NO_CONTENT
             )
-        except GroupMembership.DoesNotExist:
-            return Response(
-                {'error': 'You are not a member of this group'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
-    @action(detail=True, methods=['post'])
+        except (OwnerCannotLeaveError, NotMemberError) as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsGroupAdmin])
     def regenerate_invite(self, request, pk=None):
-        """
-        Regenerate invite code (admin only).
-        
-        POST /api/groups/{id}/regenerate_invite/
-        """
-        group = self.get_object()
-        
-        # Check if user is admin
-        if not group.is_admin(request.user):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only admins can regenerate invite codes")
-        
-        new_code = group.regenerate_invite_code()
-        
-        return Response({
-            'invite_code': new_code,
-            'message': 'Invite code regenerated successfully'
-        })
-    
-    @action(detail=True, methods=['post'])
-    def update_member_role(self, request, pk=None):
-        """
-        Update member's role (admin only).
-        
-        POST /api/groups/{id}/update_member_role/
-        Body: {"user_id": "uuid", "role": "admin" or "member"}
-        """
-        group = self.get_object()
-        
-        # Check if requester is admin
-        if not group.is_admin(request.user):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only admins can update member roles")
-        
-        user_id = request.data.get('user_id')
-        new_role = request.data.get('role')
-        
-        if not user_id or not new_role:
-            return Response(
-                {'error': 'user_id and role are required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate role
-        serializer = UpdateMemberRoleSerializer(data={'role': new_role})
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Get membership
+        """Regenerate invite code (admin only)."""
         try:
-            membership = GroupMembership.objects.get(group=group, user_id=user_id)
-        except GroupMembership.DoesNotExist:
-            return Response(
-                {'error': 'User is not a member of this group'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        
-        # Cannot change owner's role
-        if membership.role == GroupRole.OWNER:
-            return Response(
-                {'error': 'Cannot change owner role'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Update role
-        membership.role = new_role
-        membership.save(update_fields=['role'])
-        
-        return Response(GroupMemberSerializer(membership).data)
-    
-    @action(detail=True, methods=['delete'])
-    def remove_member(self, request, pk=None):
-        """
-        Remove a member from the group (admin only).
-        
-        DELETE /api/groups/{id}/remove_member/
-        Body: {"user_id": "uuid"}
-        """
-        group = self.get_object()
-        
-        # Check if requester is admin
-        if not group.is_admin(request.user):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Only admins can remove members")
-        
+            new_code = regenerate_invite_code(group_id=pk, user=request.user)
+            return Response({
+                'invite_code': new_code,
+                'message': 'Invite code regenerated successfully'
+            })
+        except InsufficientPermissionsError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsGroupAdmin])
+    def update_member_role(self, request, pk=None):
+        """Update member's role (admin only)."""
+        serializer = UpdateMemberRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         user_id = request.data.get('user_id')
-        
         if not user_id:
             return Response(
                 {'error': 'user_id is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Cannot remove owner
-        if str(group.owner.id) == str(user_id):
+
+        try:
+            membership = update_member_role(
+                group_id=pk,
+                user_id=user_id,
+                new_role=serializer.validated_data['role'],
+                updated_by=request.user
+            )
+        except (InsufficientPermissionsError, NotMemberError, CannotChangeOwnerRoleError) as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        output_serializer = GroupMemberSerializer(membership)
+        return Response(output_serializer.data)
+
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated, IsGroupAdmin])
+    def remove_member(self, request, pk=None):
+        """Remove a member from the group (admin only)."""
+        user_id = request.data.get('user_id')
+
+        if not user_id:
             return Response(
-                {'error': 'Cannot remove group owner'},
+                {'error': 'user_id is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Remove membership
+
         try:
-            membership = GroupMembership.objects.get(group=group, user_id=user_id)
-            membership.delete()
+            remove_member(group_id=pk, user_id=user_id, removed_by=request.user)
             return Response(
                 {'message': 'Member removed successfully'},
                 status=status.HTTP_204_NO_CONTENT
             )
-        except GroupMembership.DoesNotExist:
-            return Response(
-                {'error': 'User is not a member of this group'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
+        except (CannotRemoveOwnerError, NotMemberError, InsufficientPermissionsError) as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=True, methods=['get'])
     def library(self, request, pk=None):
-        """
-        Get group's coffee library.
-        
-        GET /api/groups/{id}/library/
-        """
-        group = self.get_object()
-        
-        # Check if user is member
-        if not group.has_member(request.user):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You must be a member to view the group library")
-        
-        library = GroupLibraryEntry.objects.filter(
-            group=group
-        ).select_related('coffeebean', 'added_by').order_by('-pinned', '-added_at')
-        
-        serializer = GroupLibraryEntrySerializer(library, many=True)
-        return Response(serializer.data)
-    
+        """Get group's coffee library."""
+        try:
+            library = get_group_library(group_id=pk, user=request.user)
+            serializer = GroupLibraryEntrySerializer(library, many=True)
+            return Response(serializer.data)
+        except NotMemberError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+
     @action(detail=True, methods=['post'])
     def add_to_library(self, request, pk=None):
-        """
-        Add coffee bean to group library.
-        
-        POST /api/groups/{id}/add_to_library/
-        Body: {"coffeebean_id": "uuid", "notes": "optional"}
-        """
-        group = self.get_object()
-        
-        # Check if user is member
-        if not group.has_member(request.user):
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("You must be a member to add to the library")
-        
+        """Add coffee bean to group library."""
         coffeebean_id = request.data.get('coffeebean_id')
         notes = request.data.get('notes', '')
-        
+
         if not coffeebean_id:
             return Response(
                 {'error': 'coffeebean_id is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         try:
-            coffeebean = CoffeeBean.objects.get(id=coffeebean_id, is_active=True)
-        except CoffeeBean.DoesNotExist:
-            return Response(
-                {'error': 'Coffee bean not found'},
-                status=status.HTTP_404_NOT_FOUND
+            entry = add_to_library(
+                group_id=pk,
+                coffeebean_id=coffeebean_id,
+                user=request.user,
+                notes=notes
             )
-        
-        # Create or get library entry
-        entry, created = GroupLibraryEntry.objects.get_or_create(
-            group=group,
-            coffeebean=coffeebean,
-            defaults={
-                'added_by': request.user,
-                'notes': notes
-            }
-        )
-        
-        if not created:
-            return Response(
-                {'error': 'Coffee bean already in group library'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        except (BeanNotFoundError, NotMemberError, DuplicateLibraryEntryError) as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = GroupLibraryEntrySerializer(entry)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -373,6 +256,6 @@ def my_groups(request):
     groups = Group.objects.filter(
         memberships__user=request.user
     ).select_related('owner').distinct()
-    
+
     serializer = GroupListSerializer(groups, many=True, context={'request': request})
     return Response(serializer.data)
