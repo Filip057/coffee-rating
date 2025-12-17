@@ -75,63 +75,28 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'author', 'created_at', 'updated_at', 'coffeebean_detail', 'taste_tags']
     
     def validate(self, attrs):
-        """Validate review data."""
-        # Validate rating scores
+        """Validate review data - basic input validation only."""
+        # Validate rating scores (basic range check)
         if attrs.get('rating') and (attrs['rating'] < 1 or attrs['rating'] > 5):
             raise serializers.ValidationError({'rating': 'Rating must be between 1 and 5'})
-        
-        # Validate group context
+
+        # Validate group context requirement
         if attrs.get('context') == 'group' and not attrs.get('group'):
             raise serializers.ValidationError({'group': 'Group is required for group context reviews'})
-        
-        # Check if user is member of group (if group context)
-        if attrs.get('group'):
-            request = self.context.get('request')
-            if request and request.user:
-                if not attrs['group'].has_member(request.user):
-                    raise serializers.ValidationError({'group': 'You are not a member of this group'})
-        
+
         return attrs
-    
-    def create(self, validated_data):
-        """Create review with tag association."""
-        taste_tag_ids = validated_data.pop('taste_tag_ids', [])
-        
-        review = Review.objects.create(**validated_data)
-        
-        # Associate tags
-        if taste_tag_ids:
-            tags = Tag.objects.filter(id__in=taste_tag_ids)
-            review.taste_tags.set(tags)
-        
-        return review
-    
-    def update(self, instance, validated_data):
-        """Update review with tag association."""
-        taste_tag_ids = validated_data.pop('taste_tag_ids', None)
-        
-        # Update fields
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        
-        # Update tags if provided
-        if taste_tag_ids is not None:
-            tags = Tag.objects.filter(id__in=taste_tag_ids)
-            instance.taste_tags.set(tags)
-        
-        return instance
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
-    """Simplified serializer for review creation."""
-    
+    """Simplified serializer for review creation - validation only."""
+
+    taste_tags = TagSerializer(many=True, read_only=True)
     taste_tag_ids = serializers.ListField(
         child=serializers.UUIDField(),
         write_only=True,
         required=False
     )
-    
+
     class Meta:
         model = Review
         fields = [
@@ -144,41 +109,27 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
             'aftertaste_score',
             'notes',
             'brew_method',
+            'taste_tags',
             'taste_tag_ids',
             'context',
             'group',
             'would_buy_again',
         ]
-    
+
     def validate(self, attrs):
-        """Validate review data."""
-        # Rating validation
+        """Validate review input data - basic validation only.
+
+        Business logic validations (duplicate checks, group membership, etc.)
+        are handled in the service layer.
+        """
+        # Basic rating range validation
         if attrs.get('rating') and (attrs['rating'] < 1 or attrs['rating'] > 5):
             raise serializers.ValidationError({'rating': 'Rating must be between 1 and 5'})
-        
-        # Group context validation
+
+        # Basic group context requirement
         if attrs.get('context') == 'group' and not attrs.get('group'):
             raise serializers.ValidationError({'group': 'Group is required for group context'})
-        
-        # Check group membership
-        if attrs.get('group'):
-            request = self.context.get('request')
-            if request and request.user:
-                if not attrs['group'].has_member(request.user):
-                    raise serializers.ValidationError({'group': 'You must be a member of this group'})
-        
-        # Check if user already reviewed this bean
-        request = self.context.get('request')
-        if request and request.user:
-            existing = Review.objects.filter(
-                author=request.user,
-                coffeebean=attrs.get('coffeebean')
-            ).exists()
-            if existing:
-                raise serializers.ValidationError({
-                    'coffeebean': 'You have already reviewed this coffee bean'
-                })
-        
+
         return attrs
 
 
