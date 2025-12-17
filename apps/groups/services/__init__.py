@@ -33,10 +33,10 @@ from .membership_management import (
     remove_member,
     get_group_members,
 )
-#
-# from .role_management import (
-#     update_member_role,
-# )
+
+from .role_management import (
+    update_member_role,
+)
 #
 # from .invite_management import (
 #     regenerate_invite_code,
@@ -79,7 +79,7 @@ __all__ = [
     'get_group_members',
 
     # Role Management (Phase 4)
-    # 'update_member_role',
+    'update_member_role',
 
     # Invite Management (Phase 5)
     # 'regenerate_invite_code',
