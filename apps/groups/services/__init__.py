@@ -20,12 +20,12 @@ from .exceptions import (
 )
 
 # Service functions will be imported as they are implemented in subsequent phases
-# from .group_management import (
-#     create_group,
-#     update_group,
-#     delete_group,
-#     get_group_by_id,
-# )
+from .group_management import (
+    create_group,
+    update_group,
+    delete_group,
+    get_group_by_id,
+)
 #
 # from .membership_management import (
 #     join_group,
@@ -67,10 +67,10 @@ __all__ = [
     'BeanNotFoundError',
 
     # Group Management (Phase 2)
-    # 'create_group',
-    # 'update_group',
-    # 'delete_group',
-    # 'get_group_by_id',
+    'create_group',
+    'update_group',
+    'delete_group',
+    'get_group_by_id',
 
     # Membership Management (Phase 3)
     # 'join_group',
