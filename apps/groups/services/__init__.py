@@ -26,22 +26,22 @@ from .group_management import (
     delete_group,
     get_group_by_id,
 )
-#
-# from .membership_management import (
-#     join_group,
-#     leave_group,
-#     remove_member,
-#     get_group_members,
-# )
-#
-# from .role_management import (
-#     update_member_role,
-# )
-#
-# from .invite_management import (
-#     regenerate_invite_code,
-#     validate_invite_code,
-# )
+
+from .membership_management import (
+    join_group,
+    leave_group,
+    remove_member,
+    get_group_members,
+)
+
+from .role_management import (
+    update_member_role,
+)
+
+from .invite_management import (
+    regenerate_invite_code,
+    validate_invite_code,
+)
 #
 # from .library_management import (
 #     add_to_library,
@@ -73,17 +73,17 @@ __all__ = [
     'get_group_by_id',
 
     # Membership Management (Phase 3)
-    # 'join_group',
-    # 'leave_group',
-    # 'remove_member',
-    # 'get_group_members',
+    'join_group',
+    'leave_group',
+    'remove_member',
+    'get_group_members',
 
     # Role Management (Phase 4)
-    # 'update_member_role',
+    'update_member_role',
 
     # Invite Management (Phase 5)
-    # 'regenerate_invite_code',
-    # 'validate_invite_code',
+    'regenerate_invite_code',
+    'validate_invite_code',
 
     # Library Management (Phase 6)
     # 'add_to_library',
