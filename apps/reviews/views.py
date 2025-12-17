@@ -129,116 +129,135 @@ class ReviewViewSet(viewsets.ModelViewSet):
             return ReviewCreateSerializer
         return ReviewSerializer
     
-    @transaction.atomic
     def perform_create(self, serializer):
-        """
-        Create review with transaction safety.
-        
-        Steps:
-        1. Create review with author
-        2. Auto-create UserLibraryEntry
-        3. Update bean's aggregate rating
-        """
-        # Create review
-        review = serializer.save(author=self.request.user)
-        
-        # Auto-create library entry
-        UserLibraryEntry.ensure_entry(
-            user=self.request.user,
-            coffeebean=review.coffeebean,
-            added_by='review'
+        """Create review using service layer."""
+        from apps.reviews.services import create_review, add_to_library
+        from apps.reviews.services.exceptions import (
+            DuplicateReviewError,
+            BeanNotFoundError,
+            InvalidRatingError,
+            InvalidContextError,
+            GroupMembershipRequiredError,
         )
-        
-        # Update aggregate rating (done outside transaction via signal)
-        transaction.on_commit(lambda: review.coffeebean.update_aggregate_rating())
+        from rest_framework.exceptions import ValidationError
+
+        try:
+            review = create_review(
+                author=self.request.user,
+                coffeebean_id=serializer.validated_data['coffeebean'].id,
+                rating=serializer.validated_data['rating'],
+                aroma_score=serializer.validated_data.get('aroma_score'),
+                flavor_score=serializer.validated_data.get('flavor_score'),
+                acidity_score=serializer.validated_data.get('acidity_score'),
+                body_score=serializer.validated_data.get('body_score'),
+                aftertaste_score=serializer.validated_data.get('aftertaste_score'),
+                notes=serializer.validated_data.get('notes', ''),
+                brew_method=serializer.validated_data.get('brew_method', ''),
+                taste_tag_ids=[tag.id for tag in serializer.validated_data.get('taste_tags', [])],
+                context=serializer.validated_data.get('context', 'personal'),
+                group_id=serializer.validated_data.get('group').id if serializer.validated_data.get('group') else None,
+                would_buy_again=serializer.validated_data.get('would_buy_again'),
+            )
+
+            # Auto-add to library
+            add_to_library(
+                user=self.request.user,
+                coffeebean_id=review.coffeebean.id,
+                added_by='review'
+            )
+
+            # Update aggregate rating (asynchronous)
+            transaction.on_commit(lambda: review.coffeebean.update_aggregate_rating())
+
+        except (DuplicateReviewError, BeanNotFoundError, InvalidRatingError,
+                InvalidContextError, GroupMembershipRequiredError) as e:
+            raise ValidationError(str(e))
+
+        serializer.instance = review
     
-    @transaction.atomic
     def perform_update(self, serializer):
-        """Update review and recalculate aggregate."""
-        review = serializer.save()
-        transaction.on_commit(lambda: review.coffeebean.update_aggregate_rating())
+        """Update review using service layer."""
+        from apps.reviews.services import update_review
+        from apps.reviews.services.exceptions import (
+            ReviewNotFoundError,
+            UnauthorizedReviewActionError,
+            InvalidRatingError,
+        )
+        from rest_framework.exceptions import ValidationError
+
+        try:
+            review = update_review(
+                review_id=serializer.instance.id,
+                user=self.request.user,
+                rating=serializer.validated_data.get('rating'),
+                aroma_score=serializer.validated_data.get('aroma_score'),
+                flavor_score=serializer.validated_data.get('flavor_score'),
+                acidity_score=serializer.validated_data.get('acidity_score'),
+                body_score=serializer.validated_data.get('body_score'),
+                aftertaste_score=serializer.validated_data.get('aftertaste_score'),
+                notes=serializer.validated_data.get('notes'),
+                brew_method=serializer.validated_data.get('brew_method'),
+                taste_tag_ids=[tag.id for tag in serializer.validated_data.get('taste_tags', [])] if 'taste_tags' in serializer.validated_data else None,
+                would_buy_again=serializer.validated_data.get('would_buy_again'),
+            )
+
+            # Update aggregate rating (asynchronous)
+            transaction.on_commit(lambda: review.coffeebean.update_aggregate_rating())
+
+        except (ReviewNotFoundError, UnauthorizedReviewActionError, InvalidRatingError) as e:
+            raise ValidationError(str(e))
+
+        serializer.instance = review
     
-    @transaction.atomic
     def perform_destroy(self, instance):
-        """Delete review and recalculate aggregate."""
-        coffeebean = instance.coffeebean
-        instance.delete()
-        transaction.on_commit(lambda: coffeebean.update_aggregate_rating())
+        """Delete review using service layer."""
+        from apps.reviews.services import delete_review
+        from apps.reviews.services.exceptions import (
+            ReviewNotFoundError,
+            UnauthorizedReviewActionError,
+        )
+        from rest_framework.exceptions import ValidationError
+
+        try:
+            coffeebean = instance.coffeebean
+            delete_review(review_id=instance.id, user=self.request.user)
+
+            # Update aggregate rating (asynchronous)
+            transaction.on_commit(lambda: coffeebean.update_aggregate_rating())
+
+        except (ReviewNotFoundError, UnauthorizedReviewActionError) as e:
+            raise ValidationError(str(e))
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def my_reviews(self, request):
-        """Get current user's reviews."""
-        reviews = self.get_queryset().filter(author=request.user)
+        """Get current user's reviews using service layer."""
+        from apps.reviews.services import get_user_reviews
+
+        reviews = get_user_reviews(user=request.user)
         page = self.paginate_queryset(reviews)
-        
+
         if page is not None:
             serializer = self.get_serializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        
+
         serializer = self.get_serializer(reviews, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
     def statistics(self, request):
-        """
-        Get review statistics.
-        
-        Returns:
-        - Total reviews
-        - Average rating
-        - Rating distribution
-        - Top tags
-        - Reviews by month
-        """
-        queryset = self.get_queryset()
-        
-        # Filter by user or bean if specified
+        """Get review statistics using service layer."""
+        from apps.reviews.services import get_review_statistics
+
+        # Get optional filters
         user_id = request.query_params.get('user_id')
         bean_id = request.query_params.get('bean_id')
-        
-        if user_id:
-            queryset = queryset.filter(author_id=user_id)
-        if bean_id:
-            queryset = queryset.filter(coffeebean_id=bean_id)
-        
-        # Calculate statistics
-        total_reviews = queryset.count()
-        avg_rating = queryset.aggregate(avg=Avg('rating'))['avg'] or 0
-        
-        # Rating distribution
-        rating_dist = {}
-        for i in range(1, 6):
-            rating_dist[str(i)] = queryset.filter(rating=i).count()
-        
-        # Top tags
-        top_tags = list(
-            Tag.objects.filter(reviews__in=queryset)
-            .annotate(count=Count('reviews'))
-            .order_by('-count')
-            .values('id', 'name', 'count')[:10]
+
+        # Call service
+        data = get_review_statistics(
+            user_id=user_id,
+            bean_id=bean_id
         )
-        
-        # Reviews by month (last 12 months)
-        from django.db.models.functions import TruncMonth
-        reviews_by_month = list(
-            queryset
-            .annotate(month=TruncMonth('created_at'))
-            .values('month')
-            .annotate(count=Count('id'))
-            .order_by('-month')[:12]
-        )
-        
-        data = {
-            'total_reviews': total_reviews,
-            'avg_rating': round(float(avg_rating), 2),
-            'rating_distribution': rating_dist,
-            'top_tags': top_tags,
-            'reviews_by_month': {
-                str(item['month'].date()): item['count']
-                for item in reviews_by_month
-            }
-        }
-        
+
         serializer = ReviewStatisticsSerializer(data)
         return Response(serializer.data)
 
@@ -255,23 +274,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_library(request):
-    """Get user's coffee library."""
+    """Get user's coffee library using service layer."""
+    from apps.reviews.services import get_user_library
+
     archived = request.GET.get('archived', 'false').lower() == 'true'
-    search = request.GET.get('search')
-    
-    library = UserLibraryEntry.objects.filter(
+    search = request.GET.get('search', '')
+
+    library = get_user_library(
         user=request.user,
-        is_archived=archived
-    ).select_related('coffeebean')
-    
-    if search:
-        library = library.filter(
-            Q(coffeebean__name__icontains=search) |
-            Q(coffeebean__roastery_name__icontains=search)
-        )
-    
-    library = library.order_by('-added_at')
-    
+        is_archived=archived,
+        search=search
+    )
+
     serializer = UserLibraryEntrySerializer(library, many=True)
     return Response(serializer.data)
 
@@ -290,35 +304,36 @@ def user_library(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_library(request):
-    """Manually add coffee bean to user's library."""
+    """Manually add coffee bean to user's library using service layer."""
+    from apps.reviews.services import add_to_library as add_to_library_service
+    from apps.reviews.services.exceptions import BeanNotFoundError
+
     coffeebean_id = request.data.get('coffeebean_id')
-    
+
     if not coffeebean_id:
         return Response(
             {'error': 'coffeebean_id is required'},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
+
     try:
-        coffeebean = CoffeeBean.objects.get(id=coffeebean_id, is_active=True)
-    except CoffeeBean.DoesNotExist:
+        entry, created = add_to_library_service(
+            user=request.user,
+            coffeebean_id=coffeebean_id,
+            added_by='manual'
+        )
+
+        serializer = UserLibraryEntrySerializer(entry)
         return Response(
-            {'error': 'Coffee bean not found'},
+            serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
+
+    except BeanNotFoundError as e:
+        return Response(
+            {'error': str(e)},
             status=status.HTTP_404_NOT_FOUND
         )
-    
-    entry, created = UserLibraryEntry.ensure_entry(
-        user=request.user,
-        coffeebean=coffeebean,
-        added_by='manual'
-    )
-    
-    serializer = UserLibraryEntrySerializer(entry)
-    
-    return Response(
-        serializer.data,
-        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
-    )
 
 
 @extend_schema(
@@ -333,21 +348,26 @@ def add_to_library(request):
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
 def archive_library_entry(request, entry_id):
-    """Archive/unarchive a library entry."""
+    """Archive/unarchive a library entry using service layer."""
+    from apps.reviews.services import archive_library_entry as archive_service
+    from apps.reviews.services.exceptions import LibraryEntryNotFoundError
+
     try:
-        entry = UserLibraryEntry.objects.get(id=entry_id, user=request.user)
-    except UserLibraryEntry.DoesNotExist:
+        is_archived = request.data.get('is_archived', True)
+        entry = archive_service(
+            entry_id=entry_id,
+            user=request.user,
+            is_archived=is_archived
+        )
+
+        serializer = UserLibraryEntrySerializer(entry)
+        return Response(serializer.data)
+
+    except LibraryEntryNotFoundError as e:
         return Response(
-            {'error': 'Library entry not found'},
+            {'error': str(e)},
             status=status.HTTP_404_NOT_FOUND
         )
-    
-    is_archived = request.data.get('is_archived', True)
-    entry.is_archived = is_archived
-    entry.save(update_fields=['is_archived'])
-    
-    serializer = UserLibraryEntrySerializer(entry)
-    return Response(serializer.data)
 
 
 @extend_schema(
@@ -361,17 +381,19 @@ def archive_library_entry(request, entry_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def remove_from_library(request, entry_id):
-    """Remove coffee bean from user's library."""
+    """Remove coffee bean from user's library using service layer."""
+    from apps.reviews.services import remove_from_library as remove_service
+    from apps.reviews.services.exceptions import LibraryEntryNotFoundError
+
     try:
-        entry = UserLibraryEntry.objects.get(id=entry_id, user=request.user)
-    except UserLibraryEntry.DoesNotExist:
+        remove_service(entry_id=entry_id, user=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    except LibraryEntryNotFoundError as e:
         return Response(
-            {'error': 'Library entry not found'},
+            {'error': str(e)},
             status=status.HTTP_404_NOT_FOUND
         )
-    
-    entry.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TagViewSet(viewsets.ReadOnlyModelViewSet):
@@ -402,13 +424,12 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=False, methods=['get'])
     def popular(self, request):
-        """Get most popular tags."""
+        """Get most popular tags using service layer."""
+        from apps.reviews.services import get_popular_tags
+
         limit = int(request.query_params.get('limit', 20))
-        
-        tags = Tag.objects.annotate(
-            usage_count=Count('reviews')
-        ).order_by('-usage_count')[:limit]
-        
+        tags = get_popular_tags(limit=limit)
+
         serializer = self.get_serializer(tags, many=True)
         return Response(serializer.data)
 
@@ -425,14 +446,29 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_tag(request):
-    """Create a new taste tag."""
+    """Create a new taste tag using service layer."""
+    from apps.reviews.services import create_tag as create_tag_service
+    from django.db import IntegrityError
+
     serializer = TagSerializer(data=request.data)
-    
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-    
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        tag = create_tag_service(
+            name=serializer.validated_data['name'],
+            category=serializer.validated_data.get('category', '')
+        )
+
+        response_serializer = TagSerializer(tag)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    except IntegrityError as e:
+        return Response(
+            {'error': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
 
 @extend_schema(
@@ -445,42 +481,25 @@ def create_tag(request):
 )
 @api_view(['GET'])
 def bean_review_summary(request, bean_id):
-    """Get comprehensive review summary for a coffee bean."""
+    """Get comprehensive review summary for a coffee bean using service layer."""
+    from apps.reviews.services import get_bean_review_summary
+    from apps.reviews.services.exceptions import BeanNotFoundError
+
     try:
-        bean = CoffeeBean.objects.get(id=bean_id, is_active=True)
-    except CoffeeBean.DoesNotExist:
+        data = get_bean_review_summary(bean_id=bean_id)
+
+        # Add recent reviews (not in service as it's view-specific)
+        reviews = Review.objects.filter(
+            coffeebean_id=bean_id
+        ).select_related('author').prefetch_related('taste_tags').order_by('-created_at')[:5]
+
+        data['recent_reviews'] = ReviewSerializer(reviews, many=True).data
+
+        serializer = BeanReviewSummarySerializer(data)
+        return Response(serializer.data)
+
+    except BeanNotFoundError as e:
         return Response(
-            {'error': 'Coffee bean not found'},
+            {'error': str(e)},
             status=status.HTTP_404_NOT_FOUND
         )
-    
-    reviews = Review.objects.filter(coffeebean=bean).select_related('author').prefetch_related('taste_tags')
-    
-    # Rating breakdown
-    rating_breakdown = {}
-    for i in range(1, 6):
-        rating_breakdown[str(i)] = reviews.filter(rating=i).count()
-    
-    # Common tags
-    common_tags = list(
-        Tag.objects.filter(reviews__coffeebean=bean)
-        .annotate(count=Count('reviews'))
-        .order_by('-count')
-        .values('id', 'name', 'count')[:10]
-    )
-    
-    # Recent reviews
-    recent_reviews = reviews.order_by('-created_at')[:5]
-    
-    data = {
-        'bean_id': bean.id,
-        'bean_name': f"{bean.roastery_name} - {bean.name}",
-        'total_reviews': reviews.count(),
-        'avg_rating': float(bean.avg_rating),
-        'rating_breakdown': rating_breakdown,
-        'common_tags': common_tags,
-        'recent_reviews': ReviewSerializer(recent_reviews, many=True).data
-    }
-    
-    serializer = BeanReviewSummarySerializer(data)
-    return Response(serializer.data)
