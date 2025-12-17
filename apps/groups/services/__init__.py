@@ -42,14 +42,14 @@ from .invite_management import (
     regenerate_invite_code,
     validate_invite_code,
 )
-#
-# from .library_management import (
-#     add_to_library,
-#     remove_from_library,
-#     pin_library_entry,
-#     unpin_library_entry,
-#     get_group_library,
-# )
+
+from .library_management import (
+    add_to_library,
+    remove_from_library,
+    pin_library_entry,
+    unpin_library_entry,
+    get_group_library,
+)
 
 
 __all__ = [
@@ -86,9 +86,9 @@ __all__ = [
     'validate_invite_code',
 
     # Library Management (Phase 6)
-    # 'add_to_library',
-    # 'remove_from_library',
-    # 'pin_library_entry',
-    # 'unpin_library_entry',
-    # 'get_group_library',
+    'add_to_library',
+    'remove_from_library',
+    'pin_library_entry',
+    'unpin_library_entry',
+    'get_group_library',
 ]
