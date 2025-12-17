@@ -87,8 +87,3 @@ class UserLibraryEntry(models.Model):
     
     def __str__(self):
         return f"{self.user.get_display_name()} - {self.coffeebean.name}"
-    
-    @classmethod
-    def ensure_entry(cls, user, coffeebean, added_by='review'):
-        entry, created = cls.objects.get_or_create(user=user, coffeebean=coffeebean, defaults={'added_by': added_by})
-        return entry, created
