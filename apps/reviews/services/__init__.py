@@ -26,12 +26,12 @@ from .library_management import (
 )
 
 # Phase 4: Tag Management
-# from .tag_management import (
-#     create_tag,
-#     get_tag_by_id,
-#     get_popular_tags,
-#     search_tags,
-# )
+from .tag_management import (
+    create_tag,
+    get_tag_by_id,
+    get_popular_tags,
+    search_tags,
+)
 
 # Phase 5: Statistics
 # from .statistics import (
@@ -65,6 +65,11 @@ __all__ = [
     'remove_from_library',
     'archive_library_entry',
     'get_user_library',
+    # Tag Management Services
+    'create_tag',
+    'get_tag_by_id',
+    'get_popular_tags',
+    'search_tags',
     # Exceptions
     'ReviewsServiceError',
     'ReviewNotFoundError',
