@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from django.urls import reverse
 from rest_framework import status
 from apps.analytics.analytics import AnalyticsQueries
+from apps.analytics.exceptions import InvalidMetricError, MissingParameterError
 from apps.purchases.models import PaymentStatus
 
 
@@ -604,8 +605,8 @@ class TestAnalyticsQueriesTopBeans:
         assert len(result) <= 1
 
     def test_top_beans_invalid_metric(self):
-        """Test invalid metric raises error."""
-        with pytest.raises(ValueError):
+        """Test invalid metric raises domain exception."""
+        with pytest.raises(InvalidMetricError):
             AnalyticsQueries.top_beans(metric='invalid')
 
 
@@ -636,7 +637,7 @@ class TestAnalyticsQueriesTimeseries:
 
     def test_timeseries_requires_user_or_group(self):
         """Test error when neither user nor group provided."""
-        with pytest.raises(ValueError):
+        with pytest.raises(MissingParameterError):
             AnalyticsQueries.consumption_timeseries()
 
 

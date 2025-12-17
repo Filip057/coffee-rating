@@ -42,6 +42,7 @@ from decimal import Decimal
 from apps.purchases.models import PurchaseRecord, PaymentShare, PaymentStatus
 from apps.reviews.models import Review
 from apps.beans.models import CoffeeBean
+from .exceptions import InvalidMetricError, MissingParameterError
 
 
 class AnalyticsQueries:
@@ -396,7 +397,9 @@ class AnalyticsQueries:
             ]
         
         else:
-            raise ValueError(f"Invalid metric: {metric}")
+            raise InvalidMetricError(
+                f"Invalid metric: '{metric}'. Valid options: rating, kg, money, reviews"
+            )
     
     @staticmethod
     def consumption_timeseries(user_id=None, group_id=None, granularity='month'):
@@ -518,7 +521,7 @@ class AnalyticsQueries:
             return series
         
         else:
-            raise ValueError("Either user_id or group_id required")
+            raise MissingParameterError("Either user_id or group_id is required")
     
     @staticmethod
     def user_taste_profile(user_id):

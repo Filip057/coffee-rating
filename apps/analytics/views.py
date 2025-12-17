@@ -1,100 +1,28 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import status, serializers
+from rest_framework import status
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
-from drf_spectacular.utils import extend_schema, OpenApiParameter, inline_serializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from apps.accounts.models import User
 from apps.groups.models import Group
 from .analytics import AnalyticsQueries
-
-
-# Response serializers for API documentation
-class UserConsumptionSerializer(serializers.Serializer):
-    total_kg = serializers.FloatField()
-    total_czk = serializers.FloatField()
-    purchases_count = serializers.IntegerField()
-    unique_beans = serializers.IntegerField()
-    avg_price_per_kg = serializers.FloatField(allow_null=True)
-
-
-class MemberBreakdownUserSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    email = serializers.EmailField()
-    display_name = serializers.CharField()
-
-
-class MemberBreakdownSerializer(serializers.Serializer):
-    user = MemberBreakdownUserSerializer()
-    kg = serializers.FloatField()
-    czk = serializers.FloatField()
-
-
-class GroupConsumptionSerializer(serializers.Serializer):
-    total_kg = serializers.FloatField()
-    total_czk = serializers.FloatField()
-    purchases_count = serializers.IntegerField()
-    unique_beans = serializers.IntegerField()
-    member_breakdown = MemberBreakdownSerializer(many=True)
-
-
-class TopBeanSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    name = serializers.CharField()
-    roastery_name = serializers.CharField()
-    score = serializers.FloatField()
-    metric = serializers.CharField()
-    review_count = serializers.IntegerField(required=False)
-    avg_rating = serializers.FloatField(required=False)
-    total_kg = serializers.FloatField(required=False)
-    total_spent_czk = serializers.CharField(required=False)
-
-
-class TopBeansResponseSerializer(serializers.Serializer):
-    metric = serializers.CharField()
-    period_days = serializers.IntegerField(allow_null=True)
-    results = TopBeanSerializer(many=True)
-
-
-class TimeseriesPointSerializer(serializers.Serializer):
-    period = serializers.CharField()
-    kg = serializers.FloatField()
-    czk = serializers.FloatField()
-    purchases_count = serializers.IntegerField()
-
-
-class TimeseriesResponseSerializer(serializers.Serializer):
-    granularity = serializers.CharField()
-    data = TimeseriesPointSerializer(many=True)
-
-
-class TasteProfileSerializer(serializers.Serializer):
-    review_count = serializers.IntegerField()
-    avg_rating = serializers.FloatField()
-    favorite_origins = serializers.ListField(child=serializers.DictField())
-    favorite_roast_profiles = serializers.ListField(child=serializers.DictField())
-    common_tags = serializers.ListField(child=serializers.DictField())
-    brew_methods = serializers.ListField(child=serializers.DictField())
-
-
-class DashboardTopBeanSerializer(serializers.Serializer):
-    id = serializers.CharField()
-    name = serializers.CharField()
-    roastery_name = serializers.CharField()
-    avg_rating = serializers.FloatField()
-    review_count = serializers.IntegerField()
-
-
-class DashboardResponseSerializer(serializers.Serializer):
-    consumption = UserConsumptionSerializer()
-    taste_profile = TasteProfileSerializer(allow_null=True)
-    top_beans = DashboardTopBeanSerializer(many=True)
-
-
-class ErrorSerializer(serializers.Serializer):
-    error = serializers.CharField()
+from .serializers import (
+    # Input serializers
+    PeriodQuerySerializer,
+    TopBeansQuerySerializer,
+    TimeseriesQuerySerializer,
+    # Response serializers
+    UserConsumptionSerializer,
+    GroupConsumptionSerializer,
+    TopBeansResponseSerializer,
+    TimeseriesResponseSerializer,
+    TasteProfileSerializer,
+    DashboardResponseSerializer,
+    ErrorSerializer,
+)
 
 
 @extend_schema(
