@@ -26,13 +26,13 @@ from .group_management import (
     delete_group,
     get_group_by_id,
 )
-#
-# from .membership_management import (
-#     join_group,
-#     leave_group,
-#     remove_member,
-#     get_group_members,
-# )
+
+from .membership_management import (
+    join_group,
+    leave_group,
+    remove_member,
+    get_group_members,
+)
 #
 # from .role_management import (
 #     update_member_role,
@@ -73,10 +73,10 @@ __all__ = [
     'get_group_by_id',
 
     # Membership Management (Phase 3)
-    # 'join_group',
-    # 'leave_group',
-    # 'remove_member',
-    # 'get_group_members',
+    'join_group',
+    'leave_group',
+    'remove_member',
+    'get_group_members',
 
     # Role Management (Phase 4)
     # 'update_member_role',
