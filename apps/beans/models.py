@@ -123,3 +123,35 @@ class CoffeeBeanVariant(models.Model):
         if self.price_czk and self.package_weight_grams:
             self.price_per_gram = self.price_czk / Decimal(self.package_weight_grams)
         super().save(*args, **kwargs)
+
+
+class MergeHistory(models.Model):
+    """Track bean merge operations for audit trail."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    merged_from = models.UUIDField(help_text="ID of bean that was merged (deleted)")
+    merged_into = models.ForeignKey(
+        CoffeeBean,
+        on_delete=models.CASCADE,
+        related_name='merge_targets',
+        help_text="Bean that absorbed the merged bean"
+    )
+    merged_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='bean_merges'
+    )
+    reason = models.TextField(blank=True)
+    merged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'bean_merge_history'
+        ordering = ['-merged_at']
+        indexes = [
+            models.Index(fields=['merged_from']),
+            models.Index(fields=['merged_at']),
+        ]
+
+    def __str__(self):
+        return f"Merge {self.merged_from} → {self.merged_into_id}"
