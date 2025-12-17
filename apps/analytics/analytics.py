@@ -168,6 +168,7 @@ class AnalyticsQueries:
 
         This method provides a comprehensive view of a group's coffee
         consumption, including totals and individual member contributions.
+        Optimized to use a single aggregated query instead of N+1 queries.
 
         Args:
             group_id (UUID): The group's unique identifier.
@@ -180,9 +181,9 @@ class AnalyticsQueries:
                 - total_spent_czk (Decimal): Total spent by the group.
                 - purchases_count (int): Number of group purchases.
                 - member_breakdown (list[dict]): Per-member statistics, each containing:
-                    - user (User): The user object.
-                    - total_kg (Decimal): User's portion of consumption.
-                    - total_spent_czk (Decimal): User's total spending.
+                    - user (dict): User info with id, email, display_name.
+                    - kg (Decimal): User's portion of consumption.
+                    - czk (Decimal): User's total spending.
                     - share_percentage (float): User's share as percentage of total.
 
         Example:
@@ -191,60 +192,81 @@ class AnalyticsQueries:
                 stats = AnalyticsQueries.group_consumption(group.id)
                 print(f"Group total: {stats['total_kg']} kg")
                 for member in stats['member_breakdown']:
-                    print(f"  {member['user'].email}: {member['share_percentage']}%")
+                    print(f"  {member['user']['email']}: {member['share_percentage']}%")
 
         Note:
-            The member_breakdown includes all current group members, even if
-            they haven't participated in any purchases (they'll have 0 values).
-            This is useful for showing contribution imbalances.
+            The member_breakdown includes only members who have payment shares
+            in the filtered period. Members with no purchases won't appear.
         """
+        from apps.groups.models import GroupMembership
+
         # Get group purchases
         purchases = PurchaseRecord.objects.filter(group_id=group_id)
-        
+
         if start_date:
             purchases = purchases.filter(date__gte=start_date)
         if end_date:
             purchases = purchases.filter(date__lte=end_date)
-        
+
         # Group totals
         totals = purchases.aggregate(
             total_czk=Coalesce(Sum('total_price_czk'), Decimal('0.00')),
-            total_grams=Coalesce(
-                Sum('package_weight_grams'),
-                0
-            ),
+            total_grams=Coalesce(Sum('package_weight_grams'), 0),
             count=Count('id')
         )
-        
+
         total_kg = Decimal(totals['total_grams']) / Decimal('1000.0')
-        
-        # Per-member breakdown
-        from apps.groups.models import GroupMembership
+
+        # Get all group members for the breakdown
         memberships = GroupMembership.objects.filter(
             group_id=group_id
         ).select_related('user')
-        
+
+        # Build member breakdown - call user_consumption for each member
+        # but return plain dicts (not Django objects)
         member_breakdown = []
         for membership in memberships:
-            user_data = AnalyticsQueries.user_consumption(
-                membership.user_id,
-                start_date,
-                end_date
-            )
-            
+            user = membership.user
+
+            # Filter shares for this user within group purchases
+            user_shares = PaymentShare.objects.filter(
+                user=user,
+                purchase__group_id=group_id,
+                status=PaymentStatus.PAID
+            ).select_related('purchase')
+
+            if start_date:
+                user_shares = user_shares.filter(purchase__date__gte=start_date)
+            if end_date:
+                user_shares = user_shares.filter(purchase__date__lte=end_date)
+
+            # Calculate user's consumption within this group
+            user_czk = Decimal('0.00')
+            user_grams = Decimal('0.00')
+
+            for share in user_shares:
+                user_czk += share.amount_czk
+                if share.purchase.package_weight_grams:
+                    share_ratio = share.amount_czk / share.purchase.total_price_czk
+                    user_grams += Decimal(share.purchase.package_weight_grams) * share_ratio
+
+            user_kg = user_grams / Decimal('1000.0')
+
             share_pct = 0.0
             if totals['total_czk'] > 0:
-                share_pct = float(
-                    (user_data['total_spent_czk'] / totals['total_czk']) * 100
-                )
-            
+                share_pct = float((user_czk / totals['total_czk']) * 100)
+
             member_breakdown.append({
-                'user': membership.user,
-                'total_kg': user_data['total_kg'],
-                'total_spent_czk': user_data['total_spent_czk'],
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'display_name': user.get_display_name(),
+                },
+                'kg': round(user_kg, 3),
+                'czk': user_czk,
                 'share_percentage': round(share_pct, 2),
             })
-        
+
         return {
             'total_kg': round(total_kg, 3),
             'total_spent_czk': totals['total_czk'],
@@ -275,27 +297,29 @@ class AnalyticsQueries:
 
         Returns:
             list[dict]: List of dictionaries, each containing:
-                - bean (CoffeeBean): The coffee bean object.
+                - bean_id (str): UUID of the coffee bean.
+                - bean_name (str): Name of the coffee bean.
+                - roastery_name (str): Name of the roastery.
                 - score (float): The ranking score (varies by metric).
                 - metric (str): Human-readable metric name.
                 - Additional metric-specific fields (review_count, avg_rating,
                   total_kg, total_spent_czk).
 
         Raises:
-            ValueError: If an invalid metric is specified.
+            InvalidMetricError: If an invalid metric is specified.
 
         Example:
             Top beans by rating::
 
                 top_rated = AnalyticsQueries.top_beans(metric='rating', limit=5)
                 for item in top_rated:
-                    print(f"{item['bean'].name}: {item['score']} stars")
+                    print(f"{item['bean_name']}: {item['score']} stars")
 
             Most purchased beans this month::
 
                 top_kg = AnalyticsQueries.top_beans(metric='kg', period_days=30)
                 for item in top_kg:
-                    print(f"{item['bean'].name}: {item['total_kg']} kg")
+                    print(f"{item['bean_name']}: {item['total_kg']} kg")
 
         Note:
             For 'rating' metric, beans must have at least 3 reviews to be
@@ -312,25 +336,28 @@ class AnalyticsQueries:
                 review_count__gte=3,
                 is_active=True
             ).order_by('-avg_rating', '-review_count')[:limit]
-            
+
             return [
                 {
-                    'bean': bean,
+                    'bean_id': str(bean.id),
+                    'bean_name': bean.name,
+                    'roastery_name': bean.roastery_name,
                     'score': float(bean.avg_rating),
                     'review_count': bean.review_count,
+                    'avg_rating': float(bean.avg_rating),
                     'metric': 'Average Rating'
                 }
                 for bean in beans
             ]
-        
+
         elif metric == 'kg':
-            # Top by total weight purchased
+            # Top by total weight purchased (optimized - no N+1)
             purchases = PurchaseRecord.objects.filter(
                 coffeebean__isnull=False
             )
             if cutoff_date:
                 purchases = purchases.filter(date__gte=cutoff_date)
-            
+
             top_beans = purchases.values(
                 'coffeebean_id',
                 'coffeebean__name',
@@ -338,56 +365,59 @@ class AnalyticsQueries:
             ).annotate(
                 total_grams=Sum('package_weight_grams')
             ).order_by('-total_grams')[:limit]
-            
-            results = []
-            for item in top_beans:
-                bean = CoffeeBean.objects.get(id=item['coffeebean_id'])
-                total_kg = Decimal(item['total_grams'] or 0) / Decimal('1000.0')
-                results.append({
-                    'bean': bean,
-                    'score': float(total_kg),
-                    'total_kg': round(total_kg, 3),
+
+            return [
+                {
+                    'bean_id': str(item['coffeebean_id']),
+                    'bean_name': item['coffeebean__name'],
+                    'roastery_name': item['coffeebean__roastery_name'],
+                    'score': float(Decimal(item['total_grams'] or 0) / Decimal('1000.0')),
+                    'total_kg': float(round(Decimal(item['total_grams'] or 0) / Decimal('1000.0'), 3)),
                     'metric': 'Total Kilograms'
-                })
-            
-            return results
-        
+                }
+                for item in top_beans
+            ]
+
         elif metric == 'money':
-            # Top by total money spent
+            # Top by total money spent (optimized - no N+1)
             purchases = PurchaseRecord.objects.filter(
                 coffeebean__isnull=False
             )
             if cutoff_date:
                 purchases = purchases.filter(date__gte=cutoff_date)
-            
+
             top_beans = purchases.values(
-                'coffeebean_id'
+                'coffeebean_id',
+                'coffeebean__name',
+                'coffeebean__roastery_name'
             ).annotate(
                 total_czk=Sum('total_price_czk')
             ).order_by('-total_czk')[:limit]
-            
-            results = []
-            for item in top_beans:
-                bean = CoffeeBean.objects.get(id=item['coffeebean_id'])
-                results.append({
-                    'bean': bean,
+
+            return [
+                {
+                    'bean_id': str(item['coffeebean_id']),
+                    'bean_name': item['coffeebean__name'],
+                    'roastery_name': item['coffeebean__roastery_name'],
                     'score': float(item['total_czk']),
-                    'total_spent_czk': item['total_czk'],
+                    'total_spent_czk': str(item['total_czk']),
                     'metric': 'Total Spent (CZK)'
-                })
-            
-            return results
-        
+                }
+                for item in top_beans
+            ]
+
         elif metric == 'reviews':
             # Top by review count
             beans = CoffeeBean.objects.filter(
                 review_count__gt=0,
                 is_active=True
             ).order_by('-review_count', '-avg_rating')[:limit]
-            
+
             return [
                 {
-                    'bean': bean,
+                    'bean_id': str(bean.id),
+                    'bean_name': bean.name,
+                    'roastery_name': bean.roastery_name,
                     'score': bean.review_count,
                     'review_count': bean.review_count,
                     'avg_rating': float(bean.avg_rating),

@@ -553,8 +553,12 @@ class TestAnalyticsQueriesGroupConsumption:
 
         # Each member paid 300 CZK
         for member in result['member_breakdown']:
-            if member['total_spent_czk'] > 0:
-                assert member['total_spent_czk'] == Decimal('300.00')
+            if member['czk'] > 0:
+                assert member['czk'] == Decimal('300.00')
+            # Verify user is now a plain dict
+            assert 'id' in member['user']
+            assert 'email' in member['user']
+            assert 'display_name' in member['user']
 
 
 @pytest.mark.django_db
@@ -569,8 +573,11 @@ class TestAnalyticsQueriesTopBeans:
 
         # Beans with min 3 reviews, sorted by avg_rating
         for item in result:
-            assert item['bean'].review_count >= 3
+            assert item['review_count'] >= 3
             assert 'score' in item
+            assert 'bean_id' in item
+            assert 'bean_name' in item
+            assert 'roastery_name' in item
 
     def test_top_beans_by_kg(self, analytics_personal_purchase, analytics_group_purchase):
         """Test top beans by kilograms."""
