@@ -34,10 +34,10 @@ from .tag_management import (
 )
 
 # Phase 5: Statistics
-# from .statistics import (
-#     get_review_statistics,
-#     get_bean_review_summary,
-# )
+from .statistics import (
+    get_review_statistics,
+    get_bean_review_summary,
+)
 
 # Domain Exceptions
 from .exceptions import (
@@ -70,6 +70,9 @@ __all__ = [
     'get_tag_by_id',
     'get_popular_tags',
     'search_tags',
+    # Statistics Services
+    'get_review_statistics',
+    'get_bean_review_summary',
     # Exceptions
     'ReviewsServiceError',
     'ReviewNotFoundError',
