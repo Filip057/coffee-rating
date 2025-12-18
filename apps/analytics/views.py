@@ -23,6 +23,8 @@ from .serializers import (
     DashboardResponseSerializer,
     ErrorSerializer,
 )
+from .permissions import IsGroupMemberForAnalytics
+from .exceptions import AnalyticsServiceError, InvalidMetricError
 
 
 @extend_schema(
@@ -41,42 +43,25 @@ from .serializers import (
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_consumption(request, user_id=None):
-    """Get user's coffee consumption statistics."""
-    # If no user_id, use current user
-    if user_id is None:
-        user_id = request.user.id
-    
+    """Get user's coffee consumption statistics - thin HTTP handler."""
+    # Use current user if no ID provided
+    target_user_id = user_id if user_id is not None else request.user.id
+
     # Verify user exists
-    user = get_object_or_404(User, id=user_id)
-    
-    # Parse date range
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    period = request.query_params.get('period')
-    
-    if period:
-        # Parse period like "2025-01"
-        try:
-            year, month = period.split('-')
-            start_date = datetime(int(year), int(month), 1).date()
-            # Last day of month
-            if int(month) == 12:
-                end_date = datetime(int(year) + 1, 1, 1).date() - timedelta(days=1)
-            else:
-                end_date = datetime(int(year), int(month) + 1, 1).date() - timedelta(days=1)
-        except (ValueError, AttributeError):
-            return Response(
-                {'error': 'Invalid period format. Use YYYY-MM'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
-    # Get consumption data
+    get_object_or_404(User, id=target_user_id)
+
+    # Validate query parameters using input serializer
+    query_serializer = PeriodQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    params = query_serializer.validated_data
+
+    # Get consumption data from service
     data = AnalyticsQueries.user_consumption(
-        user_id=user_id,
-        start_date=start_date,
-        end_date=end_date
+        user_id=target_user_id,
+        start_date=params.get('start_date'),
+        end_date=params.get('end_date')
     )
-    
+
     return Response(data)
 
 
@@ -93,39 +78,23 @@ def user_consumption(request, user_id=None):
     tags=['analytics'],
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsGroupMemberForAnalytics])
 def group_consumption(request, group_id):
-    """Get group's coffee consumption statistics."""
-    # Verify user is member of group
-    group = get_object_or_404(Group, id=group_id)
-    
-    if not group.has_member(request.user):
-        return Response(
-            {'error': 'You must be a member of this group'},
-            status=status.HTTP_403_FORBIDDEN
-        )
-    
-    # Parse date range
-    start_date = request.query_params.get('start_date')
-    end_date = request.query_params.get('end_date')
-    
-    # Get consumption data
+    """Get group's coffee consumption statistics - thin HTTP handler."""
+    # Verify group exists (permission already checked membership)
+    get_object_or_404(Group, id=group_id)
+
+    # Validate query parameters using input serializer
+    query_serializer = PeriodQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    params = query_serializer.validated_data
+
+    # Get consumption data from service (already returns plain dicts)
     data = AnalyticsQueries.group_consumption(
         group_id=group_id,
-        start_date=start_date,
-        end_date=end_date
+        start_date=params.get('start_date'),
+        end_date=params.get('end_date')
     )
-
-    # Serialize User objects in member_breakdown
-    if 'member_breakdown' in data:
-        for member in data['member_breakdown']:
-            if 'user' in member:
-                user = member['user']
-                member['user'] = {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'display_name': user.get_display_name(),
-                }
 
     return Response(data)
 
@@ -145,54 +114,29 @@ def group_consumption(request, group_id):
 )
 @api_view(['GET'])
 def top_beans(request):
-    """Get top-ranked coffee beans by various metrics."""
-    metric = request.query_params.get('metric', 'rating')
-    period_days = request.query_params.get('period', 30)
-    limit = request.query_params.get('limit', 10)
-    
+    """Get top-ranked coffee beans by various metrics - thin HTTP handler."""
+    # Validate query parameters using input serializer
+    query_serializer = TopBeansQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    params = query_serializer.validated_data
+
     try:
-        period_days = int(period_days) if period_days else None
-        limit = int(limit)
-    except ValueError:
+        # Get top beans from service (already returns plain dicts)
+        data = AnalyticsQueries.top_beans(
+            metric=params.get('metric'),
+            period_days=params.get('period'),
+            limit=params.get('limit')
+        )
+    except InvalidMetricError as e:
         return Response(
-            {'error': 'Invalid period or limit'},
+            {'error': str(e)},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
-    # Get top beans
-    data = AnalyticsQueries.top_beans(
-        metric=metric,
-        period_days=period_days,
-        limit=limit
-    )
-    
-    # Format response
-    results = []
-    for item in data:
-        bean_data = {
-            'id': str(item['bean'].id),
-            'name': item['bean'].name,
-            'roastery_name': item['bean'].roastery_name,
-            'score': item['score'],
-            'metric': item.get('metric', metric),
-        }
-        
-        # Add metric-specific data
-        if 'review_count' in item:
-            bean_data['review_count'] = item['review_count']
-        if 'avg_rating' in item:
-            bean_data['avg_rating'] = item['avg_rating']
-        if 'total_kg' in item:
-            bean_data['total_kg'] = item['total_kg']
-        if 'total_spent_czk' in item:
-            bean_data['total_spent_czk'] = str(item['total_spent_czk'])
-        
-        results.append(bean_data)
-    
+
     return Response({
-        'metric': metric,
-        'period_days': period_days,
-        'results': results
+        'metric': params.get('metric'),
+        'period_days': params.get('period'),
+        'results': data
     })
 
 
@@ -210,42 +154,31 @@ def top_beans(request):
     tags=['analytics'],
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsGroupMemberForAnalytics])
 def consumption_timeseries(request):
-    """Get consumption over time for charts."""
-    user_id = request.query_params.get('user_id', request.user.id)
-    group_id = request.query_params.get('group_id')
-    granularity = request.query_params.get('granularity', 'month')
-    
-    if group_id:
-        # Verify membership
-        group = get_object_or_404(Group, id=group_id)
-        if not group.has_member(request.user):
-            return Response(
-                {'error': 'You must be a member of this group'},
-                status=status.HTTP_403_FORBIDDEN
-            )
-    
-    # Get timeseries data
+    """Get consumption over time for charts - thin HTTP handler."""
+    # Validate query parameters using input serializer
+    query_serializer = TimeseriesQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    params = query_serializer.validated_data
+
+    # Use current user if no user_id provided and no group_id
+    user_id = params.get('user_id')
+    group_id = params.get('group_id')
+
+    if not user_id and not group_id:
+        user_id = request.user.id
+
+    # Get timeseries data from service (already returns plain dicts)
     data = AnalyticsQueries.consumption_timeseries(
         user_id=user_id if not group_id else None,
         group_id=group_id,
-        granularity=granularity
+        granularity=params.get('granularity')
     )
-    
-    # Format response
-    formatted_data = []
-    for item in data:
-        formatted_data.append({
-            'period': item['period'],
-            'kg': float(item['kg']),
-            'czk': float(item['czk']),
-            'purchases_count': item['purchases_count']
-        })
-    
+
     return Response({
-        'granularity': granularity,
-        'data': formatted_data
+        'granularity': params.get('granularity'),
+        'data': data
     })
 
 
@@ -257,20 +190,22 @@ def consumption_timeseries(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def taste_profile(request, user_id=None):
-    """Get user's taste profile based on reviews."""
-    # If no user_id, use current user
-    if user_id is None:
-        user_id = request.user.id
-    
-    # Get taste profile
-    profile = AnalyticsQueries.user_taste_profile(user_id)
-    
+    """Get user's taste profile based on reviews - thin HTTP handler."""
+    # Use current user if no ID provided
+    target_user_id = user_id if user_id is not None else request.user.id
+
+    # Verify user exists
+    get_object_or_404(User, id=target_user_id)
+
+    # Get taste profile from service (already returns plain dict)
+    profile = AnalyticsQueries.user_taste_profile(target_user_id)
+
     if profile is None:
         return Response({
             'message': 'No reviews found for this user',
             'review_count': 0
         })
-    
+
     return Response(profile)
 
 
@@ -282,33 +217,28 @@ def taste_profile(request, user_id=None):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard(request):
-    """Get dashboard summary for current user."""
+    """Get dashboard summary for current user - thin HTTP handler."""
     user = request.user
-    
-    # Get user consumption (last 30 days)
+
+    # Get user consumption (last 30 days) from service
     consumption = AnalyticsQueries.user_consumption(
         user_id=user.id,
         start_date=(datetime.now() - timedelta(days=30)).date(),
         end_date=datetime.now().date()
     )
-    
-    # Get taste profile
+
+    # Get taste profile from service
     taste_profile = AnalyticsQueries.user_taste_profile(user.id)
-    
-    # Get top beans
-    top_beans = AnalyticsQueries.top_beans(metric='rating', period_days=30, limit=5)
-    
+
+    # Get top beans from service (already returns plain dicts)
+    top_beans_data = AnalyticsQueries.top_beans(
+        metric='rating',
+        period_days=30,
+        limit=5
+    )
+
     return Response({
         'consumption': consumption,
         'taste_profile': taste_profile,
-        'top_beans': [
-            {
-                'id': str(item['bean'].id),
-                'name': item['bean'].name,
-                'roastery_name': item['bean'].roastery_name,
-                'avg_rating': item.get('avg_rating', item['score']),
-                'review_count': item.get('review_count', 0),
-            }
-            for item in top_beans
-        ]
+        'top_beans': top_beans_data
     })
