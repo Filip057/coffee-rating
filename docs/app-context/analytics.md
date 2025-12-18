@@ -1,8 +1,8 @@
 # Analytics App - Application Context
 
-> **Last Updated:** 2025-12-14
+> **Last Updated:** 2025-12-18
 > **Owner:** Filip Prudek
-> **Status:** Development
+> **Status:** Development - Recently Refactored (Phases 1-5)
 
 ---
 
@@ -35,6 +35,263 @@ Analytics is a pure query/aggregation layer that reads from other apps:
 - `reviews.Review` and `reviews.Tag` for taste profile
 - `beans.CoffeeBean` for top beans rankings
 - `groups.Group` and `groups.GroupMembership` for group analytics
+
+---
+
+## Recent Refactoring (December 2025)
+
+**Status:** Completed Phases 1-5 of DRF best practices refactoring
+
+### Phase 1: Domain Exceptions (`exceptions.py`)
+
+Created custom exception classes for analytics-specific errors:
+
+```python
+# apps/analytics/exceptions.py
+class AnalyticsServiceError(Exception):
+    """Base exception for analytics service errors."""
+
+class InvalidPeriodError(AnalyticsServiceError):
+    """Raised when period format is invalid."""
+
+class InvalidDateRangeError(AnalyticsServiceError):
+    """Raised when date range is invalid."""
+
+class InvalidMetricError(AnalyticsServiceError):
+    """Raised when metric type is invalid."""
+
+class InvalidGranularityError(AnalyticsServiceError):
+    """Raised when granularity type is invalid."""
+```
+
+**Purpose:** Provide domain-specific error types for better error handling and testing.
+
+### Phase 2: Input Serializers (`serializers.py`)
+
+Created input validation serializers to move validation logic out of views:
+
+| Serializer | Purpose | Validates |
+|------------|---------|-----------|
+| `PeriodQuerySerializer` | Date range validation | `period` (YYYY-MM), `start_date`, `end_date` |
+| `TopBeansQuerySerializer` | Top beans parameters | `metric`, `period` (1-365), `limit` (1-100) |
+| `TimeseriesQuerySerializer` | Timeseries parameters | `user_id`, `group_id`, `granularity` |
+
+**Example:**
+```python
+# Before: Manual validation in views
+period = request.query_params.get('period')
+if period:
+    try:
+        year, month = period.split('-')
+        # ... 15 lines of date parsing logic
+    except ValueError:
+        return Response({'error': 'Invalid period'}, status=400)
+
+# After: Serializer handles validation
+query_serializer = PeriodQuerySerializer(data=request.query_params)
+query_serializer.is_valid(raise_exception=True)
+params = query_serializer.validated_data
+```
+
+**Benefits:**
+- DRY: Reusable validation logic
+- Testable: Serializers have their own test suite
+- Clean views: Input validation separated from business logic
+
+### Phase 3: Custom Permissions (`permissions.py`)
+
+Created `IsGroupMemberForAnalytics` permission class:
+
+```python
+# apps/analytics/permissions.py
+class IsGroupMemberForAnalytics(BasePermission):
+    """
+    Permission check for group analytics access.
+
+    - Allows access if no group_id specified (user-level analytics)
+    - Allows access if user is a member of the specified group
+    - Denies access if user is not a member
+    """
+
+    def has_permission(self, request, view):
+        group_id = view.kwargs.get('group_id') or request.query_params.get('group_id')
+
+        if not group_id:
+            return True  # No group = user-level request
+
+        try:
+            group = Group.objects.get(id=group_id)
+            return group.has_member(request.user)
+        except Group.DoesNotExist:
+            return False
+```
+
+**Usage:**
+```python
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsGroupMemberForAnalytics])
+def group_consumption(request, group_id):
+    # Permission already verified by IsGroupMemberForAnalytics
+    ...
+```
+
+**Benefits:**
+- Declarative: Permission logic at decorator level
+- Reusable: Used by multiple endpoints
+- DRF-compliant: Standard permission class pattern
+
+### Phase 4: Service Layer Refactoring
+
+Optimized `AnalyticsQueries` service methods to return plain dictionaries instead of Django model objects:
+
+**Before:**
+```python
+# Service returned Django objects
+return [{
+    'bean': CoffeeBean,  # Django model
+    'score': float,
+}]
+
+# View had to extract and format
+for item in data:
+    bean_data = {
+        'id': str(item['bean'].id),
+        'name': item['bean'].name,
+        # ... manual extraction
+    }
+```
+
+**After:**
+```python
+# Service returns plain dicts
+return [{
+    'bean_id': str(bean.id),
+    'bean_name': bean.name,
+    'roastery_name': bean.roastery_name,
+    'score': float(score),
+}]
+
+# View just returns data directly
+return Response({'results': data})
+```
+
+**Key Changes:**
+- `top_beans()`: Returns plain dicts with `bean_id`, `bean_name`, etc.
+- `user_consumption()`: Already returned dicts (no change needed)
+- `group_consumption()`: Optimized with better query structure
+- All methods: Better query optimization with `select_related`/`prefetch_related`
+
+**Benefits:**
+- Cleaner separation: Services don't leak Django models to views
+- JSON-serializable: No need for manual conversion
+- Testable: Services return pure Python data structures
+
+### Phase 5: Thin HTTP Handler Views
+
+Refactored all 6 views to be thin HTTP handlers (~15-25 lines each):
+
+**Before (example from `top_beans` view - 50 lines):**
+```python
+def top_beans(request):
+    # Manual parameter extraction
+    metric = request.query_params.get('metric', 'rating')
+    period_days = request.query_params.get('period', 30)
+
+    # Manual validation
+    try:
+        period_days = int(period_days)
+        limit = int(limit)
+    except ValueError:
+        return Response({'error': 'Invalid'}, status=400)
+
+    # Service call
+    data = AnalyticsQueries.top_beans(...)
+
+    # Manual response formatting (20+ lines)
+    results = []
+    for item in data:
+        bean_data = {
+            'id': str(item['bean'].id),
+            # ... 15 more lines
+        }
+    return Response(results)
+```
+
+**After (24 lines):**
+```python
+def top_beans(request):
+    """Get top-ranked coffee beans - thin HTTP handler."""
+    # Validate using input serializer
+    query_serializer = TopBeansQuerySerializer(data=request.query_params)
+    query_serializer.is_valid(raise_exception=True)
+    params = query_serializer.validated_data
+
+    try:
+        # Get data from service (already returns plain dicts)
+        data = AnalyticsQueries.top_beans(
+            metric=params.get('metric'),
+            period_days=params.get('period'),
+            limit=params.get('limit')
+        )
+    except InvalidMetricError as e:
+        return Response({'error': str(e)}, status=400)
+
+    return Response({
+        'metric': params.get('metric'),
+        'period_days': params.get('period'),
+        'results': data
+    })
+```
+
+**Views Refactored:**
+1. `user_consumption`: 38 → 23 lines (39% reduction)
+2. `group_consumption`: 34 → 18 lines (47% reduction)
+3. `top_beans`: 50 → 24 lines (52% reduction)
+4. `consumption_timeseries`: 36 → 27 lines (25% reduction)
+5. `taste_profile`: Improved for consistency
+6. `dashboard`: 30 → 25 lines (17% reduction)
+
+**Total Impact:** views.py reduced from 313 to 243 lines (22% reduction)
+
+### Phase 6: Test Suite
+
+Added comprehensive test coverage for new components:
+
+| Test File | Purpose | Test Count |
+|-----------|---------|------------|
+| `test_serializers.py` | Input serializer validation | 40+ tests |
+| `test_permissions.py` | Permission class logic | 10+ tests |
+| `test_api.py` | Endpoint integration tests | 70+ tests (existing) |
+
+**Test Coverage:**
+- All serializer validation edge cases
+- Permission logic for group membership
+- Date parsing and validation
+- Parameter bounds checking
+- UUID validation
+
+### Architecture After Refactoring
+
+```
+apps/analytics/
+├── exceptions.py          # Domain exceptions (Phase 1)
+├── serializers.py         # Input + Response serializers (Phase 2)
+├── permissions.py         # Custom permission classes (Phase 3)
+├── analytics.py          # Service layer (optimized in Phase 4)
+├── views.py              # Thin HTTP handlers (refactored in Phase 5)
+├── tests/
+│   ├── conftest.py       # Test fixtures
+│   ├── test_api.py       # Integration tests
+│   ├── test_serializers.py   # New: Serializer tests (Phase 6)
+│   └── test_permissions.py   # New: Permission tests (Phase 6)
+```
+
+**Key Principles:**
+- **Separation of Concerns:** Input validation (serializers) → Business logic (services) → HTTP handling (views)
+- **DRF Best Practices:** Permission classes, serializers, exception handling
+- **Thin Views:** Views are ~15-25 lines, delegating to services and serializers
+- **Plain Dicts:** Services return JSON-serializable data structures
+- **Domain Exceptions:** Specific error types for better error handling
 
 ---
 
@@ -246,38 +503,58 @@ def user_consumption(user_id, start_date=None, end_date=None):
 ## Permissions & Security
 
 **Permission Classes:**
-- `IsAuthenticated` - Most analytics endpoints
+- `IsAuthenticated` - Most analytics endpoints (DRF built-in)
+- `IsGroupMemberForAnalytics` - Custom class for group analytics (Phase 3)
 - Public access - `top_beans` endpoint only
 
+**Custom Permission Class:**
+```python
+# apps/analytics/permissions.py
+class IsGroupMemberForAnalytics(BasePermission):
+    """
+    Checks group membership for analytics endpoints.
+    Handles both URL kwargs and query parameters.
+    """
+    # Used by: group_consumption, consumption_timeseries
+```
+
 **Access Rules:**
-| Endpoint | Who Can Access |
-|----------|----------------|
-| User consumption | Any authenticated user |
-| Group consumption | Group members only |
-| Top beans | Everyone (public) |
-| Timeseries | Authenticated (own) or group members |
-| Taste profile | Any authenticated user |
-| Dashboard | Authenticated users (own data) |
+| Endpoint | Who Can Access | Permission Classes |
+|----------|----------------|-------------------|
+| User consumption | Any authenticated user | `IsAuthenticated` |
+| Group consumption | Group members only | `IsAuthenticated, IsGroupMemberForAnalytics` |
+| Top beans | Everyone (public) | None |
+| Timeseries | Authenticated (own) or group members | `IsAuthenticated, IsGroupMemberForAnalytics` |
+| Taste profile | Any authenticated user | `IsAuthenticated` |
+| Dashboard | Authenticated users (own data) | `IsAuthenticated` |
 
 **Security Considerations:**
-- Group consumption checks membership before returning data
-- User can view any other user's consumption (public stats)
+- `IsGroupMemberForAnalytics` permission class enforces membership before data access
+- Permission class handles both URL kwargs (`group_id` in path) and query parameters
+- User can view any other user's consumption (public stats by design)
 - No PII exposed in analytics responses
+- Custom exceptions provide clean error messages without leaking internal details
 
 ---
 
 ## Testing Strategy
 
-**What to Test:**
-1. Consumption calculations (accuracy)
-2. Date filtering
-3. Group member breakdown
-4. Top beans ranking by each metric
-5. Timeseries generation
-6. Taste profile analysis
-7. Permission enforcement
+**Test Files:**
+1. `test_serializers.py` - Input serializer validation (40+ tests)
+2. `test_permissions.py` - Permission class logic (10+ tests)
+3. `test_api.py` - Endpoint integration tests (70+ tests)
 
-**Test Coverage:** 70+ test cases in `apps/analytics/tests/test_api.py`
+**What to Test:**
+1. **Serializer validation** - Input parameter bounds, formats, edge cases
+2. **Permission enforcement** - Group membership, access control
+3. **Consumption calculations** - Accuracy of kg, CZK, counts
+4. **Date filtering** - Period parsing, date ranges
+5. **Group member breakdown** - Share calculations
+6. **Top beans ranking** - Each metric (rating, kg, money, reviews)
+7. **Timeseries generation** - Monthly aggregation
+8. **Taste profile analysis** - Tag counting, preferences
+
+**Test Coverage:** 120+ test cases across 3 test files
 
 **Critical Test Cases:**
 ```python
@@ -441,16 +718,38 @@ for share in shares:
    - Never use float for CZK amounts
    - Round appropriately for display
 
-3. **ALWAYS check group membership for group analytics**
-   - Non-members should get 403, not empty data
-   - Use `group.has_member(user)` check
+3. **ALWAYS use input serializers for query parameter validation**
+   - Create serializers in `serializers.py` (Phase 2 pattern)
+   - Use `.is_valid(raise_exception=True)` in views
+   - Don't do manual validation in views
 
-4. **ALWAYS handle missing data gracefully**
+4. **ALWAYS use permission classes for access control**
+   - Use `IsGroupMemberForAnalytics` for group endpoints
+   - Don't do inline permission checks in views
+   - Permission classes should be declarative at the decorator level
+
+5. **ALWAYS return plain dicts from service methods**
+   - Services should return JSON-serializable data
+   - Don't return Django model objects from services
+   - Convert models to dicts in the service layer
+
+6. **ALWAYS keep views thin (< 25 lines)**
+   - Views should only handle HTTP concerns
+   - Delegate validation to serializers
+   - Delegate business logic to services
+   - Delegate permissions to permission classes
+
+7. **ALWAYS use domain exceptions**
+   - Raise specific exceptions from `exceptions.py`
+   - Don't return generic ValueError or TypeError
+   - Handle exceptions in views appropriately
+
+8. **ALWAYS handle missing data gracefully**
    - Users with no purchases should get zeros
    - Users with no reviews should get appropriate message
    - Never raise exceptions for empty data
 
-5. **ALWAYS consider performance**
+9. **ALWAYS consider performance**
    - Use `select_related` and `prefetch_related`
    - Avoid N+1 queries where possible
    - Consider caching for expensive operations
