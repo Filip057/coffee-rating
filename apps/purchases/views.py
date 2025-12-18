@@ -13,10 +13,19 @@ from .serializers import (
     PurchaseRecordCreateSerializer,
     PurchaseRecordListSerializer,
     PaymentShareSerializer,
-    MarkPaidSerializer,
     PurchaseSummarySerializer,
+    # Input serializers (Phase 2)
+    PurchaseFilterSerializer,
+    PaymentShareFilterSerializer,
+    MarkPaidInputSerializer,
 )
 from .services import PurchaseSplitService, SPDPaymentGenerator
+from .permissions import (
+    IsGroupMemberForPurchase,
+    CanManagePurchase,
+    CanMarkPaymentPaid,
+    IsGroupMemberForShare,
+)
 from apps.groups.models import Group
 from django.conf import settings
 
@@ -53,57 +62,56 @@ class PurchaseRecordViewSet(viewsets.ModelViewSet):
         'variant'
     ).prefetch_related('payment_shares')
     serializer_class = PurchaseRecordSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsGroupMemberForPurchase]
     pagination_class = PurchasePagination
+
+    def get_permissions(self):
+        """Use different permissions for different actions."""
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAuthenticated(), CanManagePurchase()]
+        elif self.action == 'mark_paid':
+            return [IsAuthenticated(), CanMarkPaymentPaid()]
+        return super().get_permissions()
     
     def get_queryset(self):
-        """
-        Filter purchases based on query parameters.
-        
-        Filters:
-        - group: UUID of group
-        - user: UUID of user (their purchases or shares)
-        - date_from: Start date (YYYY-MM-DD)
-        - date_to: End date (YYYY-MM-DD)
-        - is_fully_paid: true/false
-        """
+        """Filter purchases using input serializer validation."""
         queryset = super().get_queryset()
         user = self.request.user
-        
-        # Filter by group
-        group_id = self.request.query_params.get('group')
+
+        # Validate query parameters using input serializer
+        filter_serializer = PurchaseFilterSerializer(data=self.request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        params = filter_serializer.validated_data
+
+        # Apply filters based on validated params
+        group_id = params.get('group')
         if group_id:
             queryset = queryset.filter(group_id=group_id)
         else:
             # Show purchases where user is involved (bought or has payment share)
             queryset = queryset.filter(
-                models.Q(bought_by=user) | 
+                models.Q(bought_by=user) |
                 models.Q(payment_shares__user=user)
             ).distinct()
-        
+
         # Filter by user
-        user_id = self.request.query_params.get('user')
+        user_id = params.get('user')
         if user_id:
             queryset = queryset.filter(
-                models.Q(bought_by_id=user_id) | 
+                models.Q(bought_by_id=user_id) |
                 models.Q(payment_shares__user_id=user_id)
             ).distinct()
-        
+
         # Filter by date range
-        date_from = self.request.query_params.get('date_from')
-        if date_from:
-            queryset = queryset.filter(date__gte=date_from)
-        
-        date_to = self.request.query_params.get('date_to')
-        if date_to:
-            queryset = queryset.filter(date__lte=date_to)
-        
+        if 'date_from' in params:
+            queryset = queryset.filter(date__gte=params['date_from'])
+        if 'date_to' in params:
+            queryset = queryset.filter(date__lte=params['date_to'])
+
         # Filter by payment status
-        is_fully_paid = self.request.query_params.get('is_fully_paid')
-        if is_fully_paid is not None:
-            is_paid = is_fully_paid.lower() == 'true'
-            queryset = queryset.filter(is_fully_paid=is_paid)
-        
+        if 'is_fully_paid' in params:
+            queryset = queryset.filter(is_fully_paid=params['is_fully_paid'])
+
         return queryset
     
     def get_serializer_class(self):
@@ -185,56 +193,25 @@ class PurchaseRecordViewSet(viewsets.ModelViewSet):
     def mark_paid(self, request, pk=None):
         """
         Mark a payment share as paid.
-        
+
         POST /api/purchases/{id}/mark_paid/
         Body: {"payment_reference": "COFFEE-...", "note": "optional"}
         """
         purchase = self.get_object()
-        serializer = MarkPaidSerializer(data=request.data)
-        
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        payment_reference = serializer.validated_data.get('payment_reference')
-        
-        if payment_reference:
-            # Find share by payment reference
-            try:
-                share = PaymentShare.objects.get(
-                    purchase=purchase,
-                    payment_reference=payment_reference
-                )
-            except PaymentShare.DoesNotExist:
-                return Response(
-                    {'error': 'Payment share not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        else:
-            # Find user's own share
-            try:
-                share = PaymentShare.objects.get(
-                    purchase=purchase,
-                    user=request.user
-                )
-            except PaymentShare.DoesNotExist:
-                return Response(
-                    {'error': 'You do not have a payment share in this purchase'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
-        # Mark as paid
-        try:
-            PurchaseSplitService.reconcile_payment(
-                share_id=share.id,
-                paid_by_user=request.user,
-                method='manual'
-            )
-        except ValueError as e:
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+
+        # Validate input
+        input_serializer = MarkPaidInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        payment_reference = input_serializer.validated_data.get('payment_reference')
+
+        # Use service method for payment reconciliation
+        share = PurchaseSplitService.mark_purchase_paid(
+            purchase_id=purchase.id,
+            payment_reference=payment_reference,
+            user=request.user if not payment_reference else None
+        )
+
         return Response(PaymentShareSerializer(share).data)
 
 
@@ -248,29 +225,30 @@ class PaymentShareViewSet(viewsets.ReadOnlyModelViewSet):
     
     queryset = PaymentShare.objects.select_related('purchase', 'user', 'paid_by')
     serializer_class = PaymentShareSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsGroupMemberForShare]
     pagination_class = PurchasePagination
     
     def get_queryset(self):
-        """Return only shares for current user or their groups."""
+        """Filter payment shares using input serializer validation."""
         user = self.request.user
-        
+
+        # Validate query parameters using input serializer
+        filter_serializer = PaymentShareFilterSerializer(data=self.request.query_params)
+        filter_serializer.is_valid(raise_exception=True)
+        params = filter_serializer.validated_data
+
         # Get user's own shares or shares in their groups
         queryset = PaymentShare.objects.filter(
-            models.Q(user=user) | 
+            models.Q(user=user) |
             models.Q(purchase__group__memberships__user=user)
         ).select_related('purchase', 'user', 'paid_by').distinct()
-        
-        # Filter by status
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        # Filter by purchase
-        purchase_id = self.request.query_params.get('purchase')
-        if purchase_id:
-            queryset = queryset.filter(purchase_id=purchase_id)
-        
+
+        # Apply filters based on validated params
+        if 'status' in params:
+            queryset = queryset.filter(status=params['status'])
+        if 'purchase' in params:
+            queryset = queryset.filter(purchase_id=params['purchase'])
+
         return queryset
     
     @action(detail=True, methods=['get'])
