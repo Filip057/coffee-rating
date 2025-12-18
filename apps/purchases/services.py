@@ -32,6 +32,13 @@ from decimal import Decimal, ROUND_DOWN
 from django.db import transaction
 from .models import PurchaseRecord, PaymentShare, PaymentStatus
 from apps.groups.models import Group, GroupMembership
+from .exceptions import (
+    NoParticipantsError,
+    InvalidSplitError,
+    PaymentAlreadyPaidError,
+    PaymentShareNotFoundError,
+    PurchaseNotFoundError,
+)
 
 
 class PurchaseSplitService:
@@ -170,7 +177,7 @@ class PurchaseSplitService:
             participants = [m.user for m in memberships]
             
             if not participants:
-                raise ValueError("No participants found for split")
+                raise NoParticipantsError("No participants found for split")
             
             # Create purchase record
             purchase = PurchaseRecord.objects.create(
@@ -255,7 +262,7 @@ class PurchaseSplitService:
             haléř each.
         """
         if not participants:
-            raise ValueError("At least one participant required")
+            raise NoParticipantsError("At least one participant required")
         
         # Convert to haléře (1 CZK = 100 haléř)
         total_halere = int(total_czk * 100)
@@ -281,7 +288,7 @@ class PurchaseSplitService:
         # Verification (safety check)
         total_check = sum(amount for _, amount in shares)
         if total_check != total_czk:
-            raise ValueError(
+            raise InvalidSplitError(
                 f"Split calculation error: {total_check} != {total_czk}"
             )
         
@@ -327,15 +334,96 @@ class PurchaseSplitService:
             It's wrapped in a database transaction.
         """
         with transaction.atomic():
-            share = PaymentShare.objects.select_for_update().get(id=share_id)
-            
+            try:
+                share = PaymentShare.objects.select_for_update().get(id=share_id)
+            except PaymentShare.DoesNotExist:
+                raise PaymentShareNotFoundError(f"Payment share {share_id} not found")
+
             if share.status == PaymentStatus.PAID:
-                raise ValueError("Share already marked as paid")
+                raise PaymentAlreadyPaidError("Share already marked as paid")
             
             share.mark_paid(paid_by_user=paid_by_user)
             
             return share
     
+    @staticmethod
+    def mark_purchase_paid(purchase_id, payment_reference=None, user=None):
+        """
+        Mark a payment share as paid by reference or user.
+
+        This is a convenience method that combines share lookup and payment
+        reconciliation in a single transaction.
+
+        Args:
+            purchase_id (UUID): Purchase ID
+            payment_reference (str, optional): Payment reference to find share.
+                If provided, looks up share by this reference.
+            user (User, optional): User to find share for.
+                If provided and no payment_reference, looks up user's share.
+
+        Returns:
+            PaymentShare: Updated payment share with status=PAID.
+
+        Raises:
+            PurchaseNotFoundError: If purchase doesn't exist.
+            PaymentShareNotFoundError: If share not found for given criteria.
+            PaymentAlreadyPaidError: If share is already paid.
+            ValueError: If neither payment_reference nor user provided.
+
+        Example:
+            Mark payment by reference::
+
+                share = PurchaseSplitService.mark_purchase_paid(
+                    purchase_id=purchase.id,
+                    payment_reference='COFFEE-ABC123-4567',
+                    user=admin_user
+                )
+
+            Mark user's own payment::
+
+                share = PurchaseSplitService.mark_purchase_paid(
+                    purchase_id=purchase.id,
+                    user=current_user
+                )
+        """
+        with transaction.atomic():
+            try:
+                purchase = PurchaseRecord.objects.get(id=purchase_id)
+            except PurchaseRecord.DoesNotExist:
+                raise PurchaseNotFoundError(f"Purchase {purchase_id} not found")
+
+            if payment_reference:
+                # Find share by payment reference
+                try:
+                    share = PaymentShare.objects.get(
+                        purchase=purchase,
+                        payment_reference=payment_reference
+                    )
+                except PaymentShare.DoesNotExist:
+                    raise PaymentShareNotFoundError(
+                        f"Payment share with reference {payment_reference} not found"
+                    )
+            elif user:
+                # Find user's own share
+                try:
+                    share = PaymentShare.objects.get(
+                        purchase=purchase,
+                        user=user
+                    )
+                except PaymentShare.DoesNotExist:
+                    raise PaymentShareNotFoundError(
+                        f"You do not have a payment share in this purchase"
+                    )
+            else:
+                raise ValueError("Either payment_reference or user must be provided")
+
+            # Use existing reconcile_payment method
+            return PurchaseSplitService.reconcile_payment(
+                share_id=share.id,
+                paid_by_user=user,
+                method='manual'
+            )
+
     @staticmethod
     def get_purchase_summary(purchase_id):
         """
