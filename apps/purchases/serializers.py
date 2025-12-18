@@ -5,6 +5,76 @@ from apps.beans.models import CoffeeBean, CoffeeBeanVariant
 from apps.groups.models import Group
 
 
+# =============================================================================
+# Input Serializers (Phase 2)
+# =============================================================================
+
+class PurchaseFilterSerializer(serializers.Serializer):
+    """
+    Validate query parameters for purchase filtering.
+
+    Query Parameters:
+        group (UUID): Filter by group ID
+        user (UUID): Filter by user ID (bought or has share)
+        date_from (date): Filter purchases from this date
+        date_to (date): Filter purchases to this date
+        is_fully_paid (bool): Filter by payment status
+    """
+
+    group = serializers.UUIDField(required=False)
+    user = serializers.UUIDField(required=False)
+    date_from = serializers.DateField(required=False)
+    date_to = serializers.DateField(required=False)
+    is_fully_paid = serializers.BooleanField(required=False)
+
+    def validate(self, attrs):
+        """Validate date range."""
+        date_from = attrs.get('date_from')
+        date_to = attrs.get('date_to')
+
+        if date_from and date_to:
+            if date_from > date_to:
+                raise serializers.ValidationError({
+                    'date_to': 'End date must be after start date'
+                })
+
+        return attrs
+
+
+class PaymentShareFilterSerializer(serializers.Serializer):
+    """
+    Validate query parameters for payment share filtering.
+
+    Query Parameters:
+        status (str): Filter by payment status
+        purchase (UUID): Filter by purchase ID
+    """
+
+    status = serializers.ChoiceField(
+        choices=PaymentStatus.choices,
+        required=False
+    )
+    purchase = serializers.UUIDField(required=False)
+
+
+class MarkPaidInputSerializer(serializers.Serializer):
+    """
+    Validate input for marking payment as paid.
+
+    Fields:
+        payment_reference (str): Optional payment reference to mark
+        note (str): Optional note for the payment
+    """
+
+    payment_reference = serializers.CharField(max_length=64, required=False)
+    note = serializers.CharField(max_length=500, required=False)
+
+
+# =============================================================================
+# Output Serializers
+# =============================================================================
+
+
 class UserMinimalSerializer(serializers.ModelSerializer):
     """Minimal user info for nested serialization."""
     
@@ -165,13 +235,6 @@ class PurchaseRecordListSerializer(serializers.ModelSerializer):
         if obj.coffeebean:
             return f"{obj.coffeebean.roastery_name} - {obj.coffeebean.name}"
         return None
-
-
-class MarkPaidSerializer(serializers.Serializer):
-    """Serializer for marking payment share as paid."""
-    
-    payment_reference = serializers.CharField(max_length=64, required=False)
-    note = serializers.CharField(max_length=500, required=False)
 
 
 class PurchaseSummarySerializer(serializers.Serializer):
