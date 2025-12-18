@@ -194,15 +194,25 @@ class PaymentShare(models.Model):
         random_suffix = secrets.randbelow(10000)
         return f"COFFEE-{short_id}-{random_suffix:04d}"
     
+    def can_be_marked_paid(self):
+        """Check if payment share can be marked as paid."""
+        return self.status in [PaymentStatus.UNPAID, PaymentStatus.FAILED]
+
     def mark_paid(self, paid_by_user=None):
-        """Mark share as paid."""
+        """Mark share as paid with validation."""
         from django.utils import timezone
-        
+        from .exceptions import InvalidStateTransitionError
+
+        if not self.can_be_marked_paid():
+            raise InvalidStateTransitionError(
+                f"Cannot mark share as paid from status {self.status}"
+            )
+
         self.status = PaymentStatus.PAID
         self.paid_at = timezone.now()
         self.paid_by = paid_by_user
         self.save(update_fields=['status', 'paid_at', 'paid_by', 'updated_at'])
-        
+
         # Update parent purchase collection status
         self.purchase.update_collection_status()
     

@@ -32,6 +32,13 @@ from decimal import Decimal, ROUND_DOWN
 from django.db import transaction
 from .models import PurchaseRecord, PaymentShare, PaymentStatus
 from apps.groups.models import Group, GroupMembership
+from .exceptions import (
+    NoParticipantsError,
+    InvalidSplitError,
+    PaymentAlreadyPaidError,
+    PaymentShareNotFoundError,
+    PurchaseNotFoundError,
+)
 
 
 class PurchaseSplitService:
@@ -170,7 +177,7 @@ class PurchaseSplitService:
             participants = [m.user for m in memberships]
             
             if not participants:
-                raise ValueError("No participants found for split")
+                raise NoParticipantsError("No participants found for split")
             
             # Create purchase record
             purchase = PurchaseRecord.objects.create(
@@ -255,7 +262,7 @@ class PurchaseSplitService:
             haléř each.
         """
         if not participants:
-            raise ValueError("At least one participant required")
+            raise NoParticipantsError("At least one participant required")
         
         # Convert to haléře (1 CZK = 100 haléř)
         total_halere = int(total_czk * 100)
@@ -281,7 +288,7 @@ class PurchaseSplitService:
         # Verification (safety check)
         total_check = sum(amount for _, amount in shares)
         if total_check != total_czk:
-            raise ValueError(
+            raise InvalidSplitError(
                 f"Split calculation error: {total_check} != {total_czk}"
             )
         
@@ -327,10 +334,13 @@ class PurchaseSplitService:
             It's wrapped in a database transaction.
         """
         with transaction.atomic():
-            share = PaymentShare.objects.select_for_update().get(id=share_id)
-            
+            try:
+                share = PaymentShare.objects.select_for_update().get(id=share_id)
+            except PaymentShare.DoesNotExist:
+                raise PaymentShareNotFoundError(f"Payment share {share_id} not found")
+
             if share.status == PaymentStatus.PAID:
-                raise ValueError("Share already marked as paid")
+                raise PaymentAlreadyPaidError("Share already marked as paid")
             
             share.mark_paid(paid_by_user=paid_by_user)
             
