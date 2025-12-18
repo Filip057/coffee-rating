@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from django.urls import reverse
 from rest_framework import status
 from apps.analytics.analytics import AnalyticsQueries
+from apps.analytics.exceptions import InvalidMetricError, MissingParameterError
 from apps.purchases.models import PaymentStatus
 
 
@@ -552,8 +553,12 @@ class TestAnalyticsQueriesGroupConsumption:
 
         # Each member paid 300 CZK
         for member in result['member_breakdown']:
-            if member['total_spent_czk'] > 0:
-                assert member['total_spent_czk'] == Decimal('300.00')
+            if member['czk'] > 0:
+                assert member['czk'] == Decimal('300.00')
+            # Verify user is now a plain dict
+            assert 'id' in member['user']
+            assert 'email' in member['user']
+            assert 'display_name' in member['user']
 
 
 @pytest.mark.django_db
@@ -568,8 +573,11 @@ class TestAnalyticsQueriesTopBeans:
 
         # Beans with min 3 reviews, sorted by avg_rating
         for item in result:
-            assert item['bean'].review_count >= 3
+            assert item['review_count'] >= 3
             assert 'score' in item
+            assert 'bean_id' in item
+            assert 'bean_name' in item
+            assert 'roastery_name' in item
 
     def test_top_beans_by_kg(self, analytics_personal_purchase, analytics_group_purchase):
         """Test top beans by kilograms."""
@@ -604,8 +612,8 @@ class TestAnalyticsQueriesTopBeans:
         assert len(result) <= 1
 
     def test_top_beans_invalid_metric(self):
-        """Test invalid metric raises error."""
-        with pytest.raises(ValueError):
+        """Test invalid metric raises domain exception."""
+        with pytest.raises(InvalidMetricError):
             AnalyticsQueries.top_beans(metric='invalid')
 
 
@@ -636,7 +644,7 @@ class TestAnalyticsQueriesTimeseries:
 
     def test_timeseries_requires_user_or_group(self):
         """Test error when neither user nor group provided."""
-        with pytest.raises(ValueError):
+        with pytest.raises(MissingParameterError):
             AnalyticsQueries.consumption_timeseries()
 
 
