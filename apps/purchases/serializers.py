@@ -194,20 +194,8 @@ class PurchaseRecordCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Validate purchase data."""
-        # If group purchase, group is required
-        if attrs.get('group') is None:
-            # Personal purchase - no split needed
-            pass
-        else:
-            # Group purchase - validate membership
-            request = self.context.get('request')
-            if request and request.user:
-                group = attrs.get('group')
-                if not group.has_member(request.user):
-                    raise serializers.ValidationError({
-                        'group': 'You must be a member of this group'
-                    })
-        
+        # Note: Group membership validation moved to permission classes (Phase 3)
+        # See: IsGroupMemberForPurchase permission class
         return attrs
 
 
