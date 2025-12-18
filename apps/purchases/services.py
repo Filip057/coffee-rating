@@ -347,6 +347,84 @@ class PurchaseSplitService:
             return share
     
     @staticmethod
+    def mark_purchase_paid(purchase_id, payment_reference=None, user=None):
+        """
+        Mark a payment share as paid by reference or user.
+
+        This is a convenience method that combines share lookup and payment
+        reconciliation in a single transaction.
+
+        Args:
+            purchase_id (UUID): Purchase ID
+            payment_reference (str, optional): Payment reference to find share.
+                If provided, looks up share by this reference.
+            user (User, optional): User to find share for.
+                If provided and no payment_reference, looks up user's share.
+
+        Returns:
+            PaymentShare: Updated payment share with status=PAID.
+
+        Raises:
+            PurchaseNotFoundError: If purchase doesn't exist.
+            PaymentShareNotFoundError: If share not found for given criteria.
+            PaymentAlreadyPaidError: If share is already paid.
+            ValueError: If neither payment_reference nor user provided.
+
+        Example:
+            Mark payment by reference::
+
+                share = PurchaseSplitService.mark_purchase_paid(
+                    purchase_id=purchase.id,
+                    payment_reference='COFFEE-ABC123-4567',
+                    user=admin_user
+                )
+
+            Mark user's own payment::
+
+                share = PurchaseSplitService.mark_purchase_paid(
+                    purchase_id=purchase.id,
+                    user=current_user
+                )
+        """
+        with transaction.atomic():
+            try:
+                purchase = PurchaseRecord.objects.get(id=purchase_id)
+            except PurchaseRecord.DoesNotExist:
+                raise PurchaseNotFoundError(f"Purchase {purchase_id} not found")
+
+            if payment_reference:
+                # Find share by payment reference
+                try:
+                    share = PaymentShare.objects.get(
+                        purchase=purchase,
+                        payment_reference=payment_reference
+                    )
+                except PaymentShare.DoesNotExist:
+                    raise PaymentShareNotFoundError(
+                        f"Payment share with reference {payment_reference} not found"
+                    )
+            elif user:
+                # Find user's own share
+                try:
+                    share = PaymentShare.objects.get(
+                        purchase=purchase,
+                        user=user
+                    )
+                except PaymentShare.DoesNotExist:
+                    raise PaymentShareNotFoundError(
+                        f"You do not have a payment share in this purchase"
+                    )
+            else:
+                raise ValueError("Either payment_reference or user must be provided")
+
+            # Use existing reconcile_payment method
+            return PurchaseSplitService.reconcile_payment(
+                share_id=share.id,
+                paid_by_user=user,
+                method='manual'
+            )
+
+    @staticmethod
     def get_purchase_summary(purchase_id):
         """
         Get a detailed summary of a purchase and its payment status.
