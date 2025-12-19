@@ -87,3 +87,22 @@ class UserLibraryEntry(models.Model):
     
     def __str__(self):
         return f"{self.user.get_display_name()} - {self.coffeebean.name}"
+
+    @classmethod
+    def ensure_entry(cls, user, coffeebean, added_by='manual'):
+        """
+        Get or create a library entry for user and coffeebean.
+
+        Args:
+            user: The user
+            coffeebean: The coffee bean
+            added_by: How the entry was added ('review', 'purchase', 'manual')
+
+        Returns:
+            Tuple of (entry, created) where created is True if new entry was created
+        """
+        return cls.objects.get_or_create(
+            user=user,
+            coffeebean=coffeebean,
+            defaults={'added_by': added_by}
+        )

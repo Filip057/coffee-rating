@@ -104,12 +104,18 @@ class CanMarkPaymentPaid(BasePermission):
         """Check if user can mark payment as paid."""
         from .models import PaymentShare
 
-        # For purchase object (mark_paid action uses purchase)
+        # Determine if obj is a PurchaseRecord or PaymentShare
         if hasattr(obj, 'payment_shares'):
+            # This is a PurchaseRecord (from mark_paid action)
             purchase = obj
+            # User can mark if they have a share (will be validated by payment_reference)
+            if PaymentShare.objects.filter(purchase=purchase, user=request.user).exists():
+                return True
         else:
-            # This is a PaymentShare
+            # This is a PaymentShare - check if user owns this specific share
             purchase = obj.purchase
+            if obj.user == request.user:
+                return True
 
         # Purchase buyer can mark any payment
         if purchase.bought_by == request.user:
@@ -117,10 +123,6 @@ class CanMarkPaymentPaid(BasePermission):
 
         # Group owner can mark any payment in their group
         if purchase.group and purchase.group.owner == request.user:
-            return True
-
-        # User has a share in this purchase (can mark via payment_reference)
-        if PaymentShare.objects.filter(purchase=purchase, user=request.user).exists():
             return True
 
         return False

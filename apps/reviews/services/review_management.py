@@ -147,6 +147,9 @@ def create_review(
         tags = Tag.objects.filter(id__in=taste_tag_ids)
         review.taste_tags.set(tags)
 
+    # Update bean's aggregate rating
+    coffeebean.update_aggregate_rating()
+
     return review
 
 
