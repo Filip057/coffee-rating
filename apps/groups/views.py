@@ -182,7 +182,9 @@ class GroupViewSet(viewsets.ModelViewSet):
                 new_role=serializer.validated_data['role'],
                 updated_by=request.user
             )
-        except (InsufficientPermissionsError, NotMemberError, CannotChangeOwnerRoleError) as e:
+        except InsufficientPermissionsError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except (NotMemberError, CannotChangeOwnerRoleError) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         output_serializer = GroupMemberSerializer(membership)
@@ -205,7 +207,9 @@ class GroupViewSet(viewsets.ModelViewSet):
                 {'message': 'Member removed successfully'},
                 status=status.HTTP_204_NO_CONTENT
             )
-        except (CannotRemoveOwnerError, NotMemberError, InsufficientPermissionsError) as e:
+        except InsufficientPermissionsError as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except (CannotRemoveOwnerError, NotMemberError) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'])
@@ -237,7 +241,9 @@ class GroupViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 notes=notes
             )
-        except (BeanNotFoundError, NotMemberError, DuplicateLibraryEntryError) as e:
+        except BeanNotFoundError as e:
+            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except (NotMemberError, DuplicateLibraryEntryError) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = GroupLibraryEntrySerializer(entry)

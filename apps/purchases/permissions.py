@@ -25,6 +25,23 @@ class IsGroupMemberForPurchase(BasePermission):
 
     message = 'You must be a member of this group to view this purchase.'
 
+    def has_permission(self, request, view):
+        """Check permission for create action."""
+        if view.action == 'create':
+            # Check if creating a group purchase
+            group_id = request.data.get('group')
+            if group_id:
+                # Must be a member of the group
+                from apps.groups.models import Group
+                try:
+                    group = Group.objects.get(id=group_id)
+                    if not group.has_member(request.user):
+                        self.message = 'You must be a member of this group to create a purchase.'
+                        return False
+                except Group.DoesNotExist:
+                    return False
+        return True
+
     def has_object_permission(self, request, view, obj):
         """Check if user can access the purchase."""
         # Personal purchase - check if user is the buyer
@@ -70,7 +87,7 @@ class CanMarkPaymentPaid(BasePermission):
     Permission to mark a payment share as paid.
 
     Allows if:
-    - User is marking their own payment
+    - User has a share in this purchase (marking own payment via reference)
     - User is the purchase buyer (can mark any share)
     - User is the group owner (can mark any share)
 
@@ -85,17 +102,14 @@ class CanMarkPaymentPaid(BasePermission):
 
     def has_object_permission(self, request, view, obj):
         """Check if user can mark payment as paid."""
-        # For purchase object, check if passed via view
+        from .models import PaymentShare
+
+        # For purchase object (mark_paid action uses purchase)
         if hasattr(obj, 'payment_shares'):
-            # This is a PurchaseRecord
             purchase = obj
         else:
             # This is a PaymentShare
             purchase = obj.purchase
-
-        # User marking their own payment
-        if hasattr(obj, 'user') and obj.user == request.user:
-            return True
 
         # Purchase buyer can mark any payment
         if purchase.bought_by == request.user:
@@ -103,6 +117,10 @@ class CanMarkPaymentPaid(BasePermission):
 
         # Group owner can mark any payment in their group
         if purchase.group and purchase.group.owner == request.user:
+            return True
+
+        # User has a share in this purchase (can mark via payment_reference)
+        if PaymentShare.objects.filter(purchase=purchase, user=request.user).exists():
             return True
 
         return False

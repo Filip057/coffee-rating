@@ -80,7 +80,8 @@ class TestUserConsumption:
         response = analytics_user_client.get(url, {'period': 'invalid'})
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert 'error' in response.data
+        # Serializer validation returns field-specific errors
+        assert 'period' in response.data
 
     def test_consumption_unauthenticated(self, api_client):
         """Unauthenticated users cannot access consumption."""
@@ -144,7 +145,8 @@ class TestGroupConsumption:
         # Each member should have serialized user data and share info
         for member in response.data['member_breakdown']:
             assert 'share_percentage' in member
-            assert 'total_spent_czk' in member
+            assert 'czk' in member  # Changed from 'total_spent_czk'
+            assert 'kg' in member
             assert 'user' in member
             # User should be serialized as dict
             assert 'id' in member['user']
@@ -158,7 +160,8 @@ class TestGroupConsumption:
         response = analytics_outsider_client.get(url)
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert 'error' in response.data
+        # Permission class returns 'detail' key
+        assert 'detail' in response.data
 
     def test_group_consumption_with_date_range(
         self, analytics_user_client, analytics_group, analytics_group_purchase
@@ -456,8 +459,9 @@ class TestDashboard:
         assert isinstance(top_beans, list)
         if top_beans:
             bean = top_beans[0]
-            assert 'id' in bean
-            assert 'name' in bean
+            # Service now returns plain dicts with 'bean_id', 'bean_name'
+            assert 'bean_id' in bean
+            assert 'bean_name' in bean
             assert 'roastery_name' in bean
 
     def test_dashboard_unauthenticated(self, api_client):

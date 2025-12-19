@@ -153,8 +153,17 @@ class CoffeeBeanVariantViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        # Map serializer field to service parameter
+        data = serializer.validated_data
+        service_data = {
+            'bean_id': data['coffeebean'].id,
+            'package_weight_grams': data['package_weight_grams'],
+            'price_czk': data['price_czk'],
+            'purchase_url': data.get('purchase_url', ''),
+        }
+
         try:
-            variant = create_variant(**serializer.validated_data)
+            variant = create_variant(**service_data)
         except (BeanNotFoundError, DuplicateVariantError) as e:
             return Response(
                 {'error': str(e)},

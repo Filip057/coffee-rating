@@ -40,12 +40,11 @@ from apps.groups.services.exceptions import (
     AlreadyMemberError,
     NotMemberError,
     InsufficientPermissionsError,
-    CannotLeaveAsOwnerError,
+    OwnerCannotLeaveError,
     CannotChangeOwnerRoleError,
-    CannotRemoveSelfError,
+    CannotRemoveOwnerError,
     BeanNotFoundError,
     DuplicateLibraryEntryError,
-    LibraryEntryNotFoundError,
 )
 
 
@@ -87,6 +86,7 @@ class TestGroupManagement:
         assert len(group1.invite_code) == 16
         assert len(group2.invite_code) == 16
 
+    @pytest.mark.django_db(transaction=True)
     def test_create_group_retries_on_collision(self, group_owner):
         """Service retries if invite code collides (unlikely but possible)."""
         # Mock secrets.token_urlsafe to return same code twice
@@ -220,7 +220,7 @@ class TestMembershipManagement:
 
     def test_leave_group_owner_cannot_leave(self, group, group_owner):
         """Owner cannot leave their own group."""
-        with pytest.raises(CannotLeaveAsOwnerError):
+        with pytest.raises(OwnerCannotLeaveError):
             leave_group(group_id=group.id, user=group_owner)
 
     def test_remove_member_success(self, group, group_owner, member_user):
@@ -246,7 +246,7 @@ class TestMembershipManagement:
 
     def test_remove_member_cannot_remove_self(self, group, group_owner):
         """Admin cannot remove themselves."""
-        with pytest.raises(CannotRemoveSelfError):
+        with pytest.raises(CannotRemoveOwnerError):
             remove_member(
                 group_id=group.id,
                 user_id=group_owner.id,
@@ -476,7 +476,7 @@ class TestLibraryManagement:
             user=group_owner
         )
 
-        library = get_group_library(group_id=group.id)
+        library = get_group_library(group_id=group.id, user=group_owner)
 
         assert library.count() == 1
         assert library[0].coffeebean == group_coffeebean
@@ -715,7 +715,7 @@ class TestServiceIntegration:
         assert entry.added_by == group_other_user
 
         # 4. Check library
-        library = get_group_library(group_id=group.id)
+        library = get_group_library(group_id=group.id, user=group_other_user)
         assert library.count() == 1
 
         # 5. Member leaves

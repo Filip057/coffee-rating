@@ -20,7 +20,6 @@ from .exceptions import (
 )
 
 
-@transaction.atomic
 def create_group(
     *,
     name: str,
@@ -50,28 +49,30 @@ def create_group(
     Raises:
         RuntimeError: If cannot generate unique invite code after retries
     """
-    # Generate unique invite code with retry logic
+    # Retry logic outside transaction to handle invite code collisions
     for attempt in range(max_retries):
         invite_code = secrets.token_urlsafe(12)[:16]
 
         try:
-            # Create group with generated code
-            group = Group.objects.create(
-                name=name,
-                owner=owner,
-                description=description,
-                is_private=is_private,
-                invite_code=invite_code
-            )
+            # Each attempt is a separate transaction
+            with transaction.atomic():
+                # Create group with generated code
+                group = Group.objects.create(
+                    name=name,
+                    owner=owner,
+                    description=description,
+                    is_private=is_private,
+                    invite_code=invite_code
+                )
 
-            # Create owner membership
-            GroupMembership.objects.create(
-                user=owner,
-                group=group,
-                role=GroupRole.OWNER
-            )
+                # Create owner membership
+                GroupMembership.objects.create(
+                    user=owner,
+                    group=group,
+                    role=GroupRole.OWNER
+                )
 
-            return group
+                return group
 
         except IntegrityError:
             # Invite code collision (very rare)

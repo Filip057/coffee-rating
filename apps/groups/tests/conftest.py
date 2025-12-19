@@ -1,10 +1,16 @@
 import pytest
+import secrets
 from decimal import Decimal
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.groups.models import Group, GroupMembership, GroupLibraryEntry, GroupRole
 from apps.beans.models import CoffeeBean
+
+
+def generate_invite_code():
+    """Generate a random invite code for test fixtures."""
+    return secrets.token_urlsafe(12)[:16]
 
 
 @pytest.fixture
@@ -97,6 +103,7 @@ def group(db, group_owner):
         description='A group for coffee enthusiasts',
         is_private=True,
         owner=group_owner,
+        invite_code=generate_invite_code(),
     )
     # Create owner membership
     GroupMembership.objects.create(
@@ -131,6 +138,7 @@ def public_group(db, group_owner):
         description='A public group',
         is_private=False,
         owner=group_owner,
+        invite_code=generate_invite_code(),
     )
     GroupMembership.objects.create(
         user=group_owner,
