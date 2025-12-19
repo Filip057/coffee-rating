@@ -2,7 +2,7 @@
 
 A comprehensive Django REST API for coffee enthusiasts to track, rate, and share their coffee experiences. Built for individuals and teams to manage coffee purchases, reviews, and consumption analytics.
 
-**Version:** 0.5.0
+**Version:** 1.0.0
 **Status:** Development
 
 ---
