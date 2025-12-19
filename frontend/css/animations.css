@@ -1,0 +1,148 @@
+/**
+ * Animations
+ *
+ * Shared animation keyframes and utility classes
+ */
+
+/* ==========================================================================
+   Keyframes
+   ========================================================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.01);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   Animation Utility Classes
+   ========================================================================== */
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+.animate-fade-in-down {
+    animation: fadeInDown 0.4s ease forwards;
+}
+
+.animate-slide-in-right {
+    animation: slideInRight 0.3s ease forwards;
+}
+
+.animate-slide-in-left {
+    animation: slideInLeft 0.3s ease forwards;
+}
+
+.animate-pulse {
+    animation: pulse 0.3s ease;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   Animation Delays
+   ========================================================================== */
+
+.delay-1 { animation-delay: 0.05s; }
+.delay-2 { animation-delay: 0.1s; }
+.delay-3 { animation-delay: 0.15s; }
+.delay-4 { animation-delay: 0.2s; }
+.delay-5 { animation-delay: 0.25s; }
+.delay-6 { animation-delay: 0.3s; }
+
+/* ==========================================================================
+   Transition Utilities
+   ========================================================================== */
+
+.transition-all {
+    transition: all var(--transition-base);
+}
+
+.transition-colors {
+    transition: color var(--transition-base),
+                background-color var(--transition-base),
+                border-color var(--transition-base);
+}
+
+.transition-transform {
+    transition: transform var(--transition-base);
+}
+
+.transition-opacity {
+    transition: opacity var(--transition-base);
+}

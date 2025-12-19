@@ -1,0 +1,101 @@
+/**
+ * CSS Custom Properties (Design Tokens)
+ *
+ * Kavárna Design System
+ * Coffee-inspired color palette with warm, inviting tones
+ */
+
+:root {
+    /* ==========================================================================
+       Colors - Primary Palette
+       ========================================================================== */
+
+    /* Espresso - Primary dark color */
+    --espresso: #2C1810;
+    --espresso-light: #3D251A;
+
+    /* Crema - Primary accent color */
+    --crema: #D4A574;
+    --crema-light: #E5C49A;
+
+    /* Neutral tones */
+    --milk-foam: #F5F0EB;
+    --latte: #E8DDD4;
+    --porcelain: #FEFCFA;
+
+    /* Steam - Secondary text */
+    --steam: #8B7355;
+    --steam-light: #A89378;
+
+    /* ==========================================================================
+       Colors - Semantic
+       ========================================================================== */
+    --success: #6B8E5E;
+    --warning: #C4956A;
+    --error: #B85C5C;
+
+    /* ==========================================================================
+       Typography
+       ========================================================================== */
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    /* Font sizes */
+    --text-xs: 0.625rem;    /* 10px */
+    --text-sm: 0.75rem;     /* 12px */
+    --text-base: 0.875rem;  /* 14px */
+    --text-md: 0.9375rem;   /* 15px */
+    --text-lg: 1rem;        /* 16px */
+    --text-xl: 1.25rem;     /* 20px */
+    --text-2xl: 1.5rem;     /* 24px */
+    --text-3xl: 2rem;       /* 32px */
+
+    /* ==========================================================================
+       Spacing
+       ========================================================================== */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+
+    /* ==========================================================================
+       Border Radius
+       ========================================================================== */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 24px;
+    --radius-full: 9999px;
+
+    /* ==========================================================================
+       Shadows
+       ========================================================================== */
+    --shadow-sm: 0 2px 8px rgba(44, 24, 16, 0.06);
+    --shadow-md: 0 4px 16px rgba(44, 24, 16, 0.08);
+    --shadow-lg: 0 8px 24px rgba(44, 24, 16, 0.1);
+    --shadow-xl: 0 16px 48px rgba(44, 24, 16, 0.12);
+    --shadow-crema: 0 4px 16px rgba(212, 165, 116, 0.3);
+    --shadow-crema-hover: 0 6px 20px rgba(212, 165, 116, 0.4);
+
+    /* ==========================================================================
+       Transitions
+       ========================================================================== */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.2s ease;
+    --transition-slow: 0.3s ease;
+
+    /* ==========================================================================
+       Z-Index Scale
+       ========================================================================== */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-fixed: 500;
+    --z-overlay: 900;
+    --z-modal: 1000;
+    --z-toast: 1100;
+}

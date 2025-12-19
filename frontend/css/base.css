@@ -1,0 +1,114 @@
+/**
+ * Base Styles
+ *
+ * Reset and foundational styles for the application
+ */
+
+/* ==========================================================================
+   Reset
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Document
+   ========================================================================== */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-body);
+    background: var(--milk-foam);
+    color: var(--espresso);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+/* ==========================================================================
+   Typography Defaults
+   ========================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+/* ==========================================================================
+   Interactive Elements
+   ========================================================================== */
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+    outline: 2px solid var(--crema);
+    outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* ==========================================================================
+   Images
+   ========================================================================== */
+
+img,
+svg {
+    display: block;
+    max-width: 100%;
+}
+
+/* ==========================================================================
+   Scrollbar Hiding (for horizontal scroll containers)
+   ========================================================================== */
+
+.hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* ==========================================================================
+   Screen Reader Only
+   ========================================================================== */
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

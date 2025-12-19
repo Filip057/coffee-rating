@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Kavárna – Dashboard</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="dashboard">
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-top">
+                <div class="greeting">
+                    <p class="greeting-text">Dobré ráno ☀️</p>
+                    <h1 class="greeting-name">Jan Novák</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="icon-btn" aria-label="Oznámení">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <div class="avatar" role="button" aria-label="Profil">JN</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Quick Stats -->
+        <div class="quick-stats">
+            <div class="quick-stat">
+                <div class="quick-stat-value">47</div>
+                <div class="quick-stat-label">Hodnocení</div>
+            </div>
+            <div class="quick-stat">
+                <div class="quick-stat-value">32</div>
+                <div class="quick-stat-label">V knihovně</div>
+            </div>
+            <div class="quick-stat">
+                <div class="quick-stat-value">2</div>
+                <div class="quick-stat-label">Skupiny</div>
+            </div>
+        </div>
+
+        <!-- Main Navigation Cards -->
+        <section class="section">
+            <div class="nav-cards">
+                <a href="#" class="nav-card animate-fade-in-up delay-1">
+                    <div class="nav-card-icon groups">👥</div>
+                    <div class="nav-card-content">
+                        <h3>Skupiny</h3>
+                        <p>2 aktivní skupiny</p>
+                        <span class="nav-card-badge">8 členů celkem</span>
+                    </div>
+                </a>
+
+                <a href="#" class="nav-card animate-fade-in-up delay-2">
+                    <div class="nav-card-icon library">📚</div>
+                    <div class="nav-card-content">
+                        <h3>Moje knihovna</h3>
+                        <p>32 káv</p>
+                        <span class="nav-card-badge">3 nové tento měsíc</span>
+                    </div>
+                </a>
+
+                <a href="#" class="nav-card animate-fade-in-up delay-3">
+                    <div class="nav-card-icon discover">🔍</div>
+                    <div class="nav-card-content">
+                        <h3>Objevovat</h3>
+                        <p>Katalog káv</p>
+                        <span class="nav-card-badge">156 káv</span>
+                    </div>
+                </a>
+
+                <a href="#" class="nav-card animate-fade-in-up delay-4">
+                    <div class="nav-card-icon purchases">💰</div>
+                    <div class="nav-card-content">
+                        <h3>Nákupy</h3>
+                        <p>Platby & dluhy</p>
+                        <span class="nav-card-badge alert">Dlužíš 187 Kč</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- My Groups -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Moje skupiny</h2>
+                <a href="#" class="section-link">
+                    Všechny
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                </a>
+            </div>
+            <div class="groups-scroll">
+                <a href="#" class="group-chip">
+                    <div class="group-chip-icon">👨‍💻</div>
+                    <div class="group-chip-info">
+                        <h4>Kancelář Praha</h4>
+                        <p>8 členů</p>
+                    </div>
+                </a>
+                <a href="#" class="group-chip">
+                    <div class="group-chip-icon">☕</div>
+                    <div class="group-chip-info">
+                        <h4>Kavárníci Brno</h4>
+                        <p>15 členů</p>
+                    </div>
+                </a>
+                <a href="#" class="group-chip group-chip-add">
+                    <div class="group-chip-icon">+</div>
+                    <div class="group-chip-info">
+                        <h4>Přidat skupinu</h4>
+                        <p>Vytvořit nebo připojit</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Recent Activity -->
+        <section class="section">
+            <div class="section-header">
+                <h2 class="section-title">Nedávná aktivita</h2>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon">💰</div>
+                <div class="activity-content">
+                    <p class="activity-text"><strong>Martin K.</strong> ti dluží 89 Kč</p>
+                    <p class="activity-time">Ethiopia Yirgacheffe • před 2 dny</p>
+                </div>
+                <div class="activity-action">
+                    <button class="btn-small">Připomenout</button>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon">⭐</div>
+                <div class="activity-content">
+                    <p class="activity-text"><strong>Lucie P.</strong> ohodnotila Colombia Huila</p>
+                    <p class="activity-time">Kancelář Praha • včera</p>
+                </div>
+            </div>
+
+            <div class="activity-item">
+                <div class="activity-icon">🛒</div>
+                <div class="activity-content">
+                    <p class="activity-text">Nový nákup ve skupině <strong>Kavárníci Brno</strong></p>
+                    <p class="activity-time">Kenya AA Nyeri • dnes</p>
+                </div>
+                <div class="activity-action">
+                    <button class="btn-small primary">Zaplatit</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- FAB Overlay -->
+    <div class="fab-overlay" id="fabOverlay" onclick="toggleFab()"></div>
+
+    <!-- FAB Menu -->
+    <div class="fab-menu" id="fabMenu">
+        <a href="#" class="fab-menu-item">
+            <span>☕</span>
+            <span>Přidat kávu</span>
+        </a>
+        <a href="#" class="fab-menu-item">
+            <span>⭐</span>
+            <span>Nové hodnocení</span>
+        </a>
+        <a href="#" class="fab-menu-item">
+            <span>🛒</span>
+            <span>Zaznamenat nákup</span>
+        </a>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav" aria-label="Hlavní navigace">
+        <div class="nav-items">
+            <a class="nav-item active" href="#" aria-current="page">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <path d="M9 22V12h6v10"/>
+                </svg>
+                <span>Domů</span>
+            </a>
+            <a class="nav-item" href="#">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <span>Hledat</span>
+            </a>
+
+            <button class="fab" id="fabBtn" onclick="toggleFab()" aria-label="Rychlé akce" aria-expanded="false">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </button>
+
+            <a class="nav-item" href="#">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Skupiny</span>
+            </a>
+            <a class="nav-item" href="#">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>Profil</span>
+            </a>
+        </div>
+    </nav>
+
+    <script>
+        let fabOpen = false;
+
+        function toggleFab() {
+            fabOpen = !fabOpen;
+            const btn = document.getElementById('fabBtn');
+            const menu = document.getElementById('fabMenu');
+            const overlay = document.getElementById('fabOverlay');
+
+            btn.setAttribute('aria-expanded', fabOpen);
+
+            if (fabOpen) {
+                btn.style.transform = 'rotate(45deg)';
+                menu.classList.add('open');
+                overlay.classList.add('open');
+            } else {
+                btn.style.transform = 'rotate(0deg)';
+                menu.classList.remove('open');
+                overlay.classList.remove('open');
+            }
+        }
+
+        // Close FAB menu on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && fabOpen) {
+                toggleFab();
+            }
+        });
+
+        // Dynamic greeting based on time
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            const greetingEl = document.querySelector('.greeting-text');
+
+            if (hour < 12) {
+                greetingEl.textContent = 'Dobré ráno ☀️';
+            } else if (hour < 18) {
+                greetingEl.textContent = 'Dobré odpoledne 👋';
+            } else {
+                greetingEl.textContent = 'Dobrý večer 🌙';
+            }
+        }
+
+        updateGreeting();
+    </script>
+</body>
+</html>
