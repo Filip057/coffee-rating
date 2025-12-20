@@ -4,7 +4,7 @@
  * Manages authentication state, tokens, and user data
  */
 
-import Config from './config.js';
+import Config from '/static/js/config.js';
 
 /**
  * Parse JWT token to get payload

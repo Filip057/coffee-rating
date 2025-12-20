@@ -1,4 +1,25 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse, Http404
+from django.conf import settings
+
+
+def serve_frontend(request, page='login.html'):
+    """Serve frontend HTML pages."""
+    # Map clean URLs to HTML files
+    page_map = {
+        '': 'login.html',
+        'login': 'login.html',
+        'dashboard': 'dashboard.html',
+        'register': 'register.html',
+    }
+
+    # Get the actual filename
+    filename = page_map.get(page, f'{page}.html' if not page.endswith('.html') else page)
+    filepath = settings.FRONTEND_DIR / filename
+
+    if filepath.exists() and filepath.is_file():
+        return FileResponse(open(filepath, 'rb'), content_type='text/html')
+
+    raise Http404(f'Page not found: {page}')
 
 
 def error_404(request, exception):

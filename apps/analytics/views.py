@@ -211,34 +211,105 @@ def taste_profile(request, user_id=None):
 
 @extend_schema(
     responses={200: DashboardResponseSerializer},
-    description="Get dashboard summary for the current user including consumption, taste profile, and top beans.",
+    description="Get dashboard summary for the current user including all data needed for the dashboard.",
     tags=['analytics'],
 )
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def dashboard(request):
-    """Get dashboard summary for current user - thin HTTP handler."""
+    """Get comprehensive dashboard data for current user."""
+    from apps.groups.models import Group, GroupMembership
+    from apps.beans.models import CoffeeBean
+    from apps.reviews.models import Review, UserLibraryEntry
+    from apps.purchases.models import PaymentShare, PaymentStatus
+    from apps.groups.serializers import GroupListSerializer
+
     user = request.user
+    now = datetime.now()
+    thirty_days_ago = (now - timedelta(days=30)).date()
 
-    # Get user consumption (last 30 days) from service
-    consumption = AnalyticsQueries.user_consumption(
-        user_id=user.id,
-        start_date=(datetime.now() - timedelta(days=30)).date(),
-        end_date=datetime.now().date()
-    )
+    # Get user's groups
+    groups = Group.objects.filter(
+        memberships__user=user
+    ).select_related('owner').prefetch_related('memberships').distinct()
 
-    # Get taste profile from service
-    taste_profile = AnalyticsQueries.user_taste_profile(user.id)
+    groups_data = GroupListSerializer(groups, many=True, context={'request': request}).data
+    total_members = sum(g.get('member_count', 0) for g in groups_data)
 
-    # Get top beans from service (already returns plain dicts)
-    top_beans_data = AnalyticsQueries.top_beans(
-        metric='rating',
-        period_days=30,
-        limit=5
-    )
+    # Get user's library
+    library_entries = UserLibraryEntry.objects.filter(user=user, is_archived=False)
+    library_count = library_entries.count()
+    library_recent = library_entries.filter(added_at__gte=thirty_days_ago).count()
+
+    # Get user's reviews count
+    reviews_count = Review.objects.filter(user=user).count()
+
+    # Get total beans count
+    beans_count = CoffeeBean.objects.filter(is_active=True).count()
+
+    # Get outstanding payments
+    outstanding_shares = PaymentShare.objects.filter(
+        user=user,
+        status=PaymentStatus.UNPAID
+    ).select_related('purchase', 'purchase__coffeebean', 'purchase__group')
+
+    outstanding_total = sum(share.amount_czk for share in outstanding_shares)
+    outstanding_count = outstanding_shares.count()
+
+    # Build outstanding payments data
+    outstanding_payments = []
+    for share in outstanding_shares[:5]:  # Limit to 5
+        outstanding_payments.append({
+            'id': str(share.id),
+            'amount_czk': float(share.amount_czk),
+            'bean_name': share.purchase.coffeebean.name if share.purchase.coffeebean else None,
+            'group_name': share.purchase.group.name if share.purchase.group else None,
+        })
+
+    # Get consumption stats (optional, may be empty for new users)
+    try:
+        consumption = AnalyticsQueries.user_consumption(
+            user_id=user.id,
+            start_date=thirty_days_ago,
+            end_date=now.date()
+        )
+    except Exception:
+        consumption = None
+
+    # Get taste profile (optional)
+    try:
+        taste_profile = AnalyticsQueries.user_taste_profile(user.id)
+    except Exception:
+        taste_profile = None
 
     return Response({
+        # Quick stats
+        'stats': {
+            'reviews_count': reviews_count,
+            'library_count': library_count,
+            'groups_count': len(groups_data),
+        },
+        # Groups section
+        'groups': {
+            'list': groups_data,
+            'total_members': total_members,
+        },
+        # Library section
+        'library': {
+            'count': library_count,
+            'recent_count': library_recent,
+        },
+        # Beans catalog
+        'beans': {
+            'total_count': beans_count,
+        },
+        # Outstanding payments
+        'payments': {
+            'total_outstanding': float(outstanding_total),
+            'count': outstanding_count,
+            'list': outstanding_payments,
+        },
+        # Analytics (optional)
         'consumption': consumption,
         'taste_profile': taste_profile,
-        'top_beans': top_beans_data
     })

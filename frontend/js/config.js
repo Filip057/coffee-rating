@@ -5,8 +5,8 @@
  */
 
 const Config = {
-    // API base URL - change for production
-    API_BASE_URL: 'http://localhost:8000/api',
+    // API base URL - uses same origin in production
+    API_BASE_URL: '/api',
 
     // Auth endpoints
     AUTH: {
@@ -18,6 +18,46 @@ const Config = {
         UPDATE_PROFILE: '/auth/user/update/',
     },
 
+    // Groups endpoints
+    GROUPS: {
+        LIST: '/groups/',
+        MY_GROUPS: '/groups/my/',
+        DETAIL: (id) => `/groups/${id}/`,
+        MEMBERS: (id) => `/groups/${id}/members/`,
+        JOIN: (id) => `/groups/${id}/join/`,
+        LEAVE: (id) => `/groups/${id}/leave/`,
+        LIBRARY: (id) => `/groups/${id}/library/`,
+    },
+
+    // Reviews/Library endpoints
+    REVIEWS: {
+        LIST: '/reviews/',
+        MY_REVIEWS: '/reviews/my_reviews/',
+        LIBRARY: '/reviews/library/',
+        ADD_TO_LIBRARY: '/reviews/library/add/',
+    },
+
+    // Purchases endpoints
+    PURCHASES: {
+        LIST: '/purchases/',
+        MY_OUTSTANDING: '/purchases/my_outstanding/',
+        DETAIL: (id) => `/purchases/${id}/`,
+    },
+
+    // Analytics endpoints
+    ANALYTICS: {
+        DASHBOARD: '/analytics/dashboard/',
+        MY_CONSUMPTION: '/analytics/user/consumption/',
+        TASTE_PROFILE: '/analytics/user/taste-profile/',
+        TOP_BEANS: '/analytics/beans/top/',
+    },
+
+    // Beans endpoints
+    BEANS: {
+        LIST: '/beans/',
+        DETAIL: (id) => `/beans/${id}/`,
+    },
+
     // Storage keys
     STORAGE: {
         ACCESS_TOKEN: 'kavarna_access_token',
@@ -26,11 +66,11 @@ const Config = {
         REMEMBER_ME: 'kavarna_remember_me',
     },
 
-    // Routes
+    // Routes (clean URLs)
     ROUTES: {
-        LOGIN: '/login.html',
-        DASHBOARD: '/dashboard.html',
-        REGISTER: '/register.html',
+        LOGIN: '/login',
+        DASHBOARD: '/dashboard',
+        REGISTER: '/register',
     },
 
     // Token refresh threshold (refresh when less than 5 minutes remaining)
@@ -40,6 +80,11 @@ const Config = {
 // Freeze config to prevent modifications
 Object.freeze(Config);
 Object.freeze(Config.AUTH);
+Object.freeze(Config.GROUPS);
+Object.freeze(Config.REVIEWS);
+Object.freeze(Config.PURCHASES);
+Object.freeze(Config.ANALYTICS);
+Object.freeze(Config.BEANS);
 Object.freeze(Config.STORAGE);
 Object.freeze(Config.ROUTES);
 

@@ -15,30 +15,41 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from config.views import serve_frontend
+
 urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
-    
+
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='api-schema'), name='api-docs'),
-    
+
     # Authentication
     path('api/auth/', include('apps.accounts.urls')),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    
+
     # API endpoints
     path('api/beans/', include('apps.beans.urls')),
     path('api/reviews/', include('apps.reviews.urls')),
     path('api/groups/', include('apps.groups.urls')),
     path('api/purchases/', include('apps.purchases.urls')),
     path('api/analytics/', include('apps.analytics.urls')),
+
+    # Frontend pages
+    path('', serve_frontend, name='home'),
+    path('login', serve_frontend, {'page': 'login'}, name='login'),
+    path('login.html', serve_frontend, {'page': 'login'}, name='login-html'),
+    path('dashboard', serve_frontend, {'page': 'dashboard'}, name='dashboard'),
+    path('dashboard.html', serve_frontend, {'page': 'dashboard'}, name='dashboard-html'),
+    path('register', serve_frontend, {'page': 'register'}, name='register'),
+    path('register.html', serve_frontend, {'page': 'register'}, name='register-html'),
 ]
 
 # Media files (development only)

@@ -29,7 +29,10 @@ SECRET_KEY = 'django-insecure-fff_+i5h%p(*$1_s!&53$i(@4^kj7^bt0i1-0mh6%#kzsbi_9u
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+
+# CORS settings (for development)
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development!
 
 
 # Application definition
@@ -61,13 +64,13 @@ AUTH_USER_MODEL = 'accounts.User'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -146,6 +149,15 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Include frontend directory for static files
+STATICFILES_DIRS = [
+    BASE_DIR / 'frontend',
+]
+
+# Frontend directory path (for serving HTML)
+FRONTEND_DIR = BASE_DIR / 'frontend'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

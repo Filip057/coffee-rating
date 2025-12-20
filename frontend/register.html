@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kavárna – Přihlášení</title>
+    <title>Kavárna – Registrace</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/static/css/login.css">
 
     <style>
-        /* Additional styles for login page */
+        /* Additional styles for registration page */
         .form-error {
             display: none;
             padding: 12px 16px;
@@ -76,6 +76,30 @@
         .field-error.visible {
             display: block;
         }
+
+        .password-requirements {
+            font-size: 0.75rem;
+            color: var(--espresso-light);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .password-requirements ul {
+            margin: 4px 0 0 16px;
+            padding: 0;
+        }
+
+        .password-requirements li {
+            margin-bottom: 2px;
+        }
+
+        .password-requirements li.valid {
+            color: var(--success);
+        }
+
+        .password-requirements li.valid::marker {
+            content: "✓ ";
+        }
     </style>
 </head>
 <body class="login-page">
@@ -85,14 +109,31 @@
             <div class="logo">
                 <div class="logo-icon" aria-hidden="true">☕</div>
                 <h1 class="logo-text">Kavárna<span>.</span></h1>
-                <p class="logo-subtitle">Přihlaste se ke svému účtu</p>
+                <p class="logo-subtitle">Vytvořte si nový účet</p>
             </div>
 
             <!-- Error message -->
             <div class="form-error" id="formError" role="alert"></div>
 
             <!-- Form -->
-            <form id="loginForm" novalidate>
+            <form id="registerForm" novalidate>
+                <div class="form-group">
+                    <label class="form-label" for="displayName">Jméno (volitelné)</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="displayName"
+                            class="form-input"
+                            placeholder="Jan Novák"
+                            autocomplete="name"
+                        >
+                        <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label" for="email">E-mail</label>
                     <div class="input-wrapper">
@@ -120,7 +161,7 @@
                             id="password"
                             class="form-input"
                             placeholder="••••••••"
-                            autocomplete="current-password"
+                            autocomplete="new-password"
                             required
                         >
                         <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
@@ -130,32 +171,57 @@
                         <button
                             type="button"
                             class="password-toggle"
-                            onclick="togglePassword()"
+                            onclick="togglePassword('password')"
                             aria-label="Zobrazit/skrýt heslo"
                         >
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="eye-icon" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="password-eye-icon" aria-hidden="true">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
                                 <circle cx="12" cy="12" r="3"/>
                             </svg>
                         </button>
                     </div>
                     <p class="field-error" id="passwordError"></p>
+                    <div class="password-requirements" id="passwordRequirements">
+                        <ul>
+                            <li id="req-length">Alespoň 8 znaků</li>
+                            <li id="req-uppercase">Alespoň 1 velké písmeno</li>
+                            <li id="req-number">Alespoň 1 číslo</li>
+                        </ul>
+                    </div>
                 </div>
 
-                <div class="form-options">
-                    <div class="checkbox-wrapper" id="rememberMe" role="checkbox" aria-checked="false" tabindex="0">
-                        <div class="checkbox" aria-hidden="true">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
-                                <path d="M20 6L9 17l-5-5"/>
+                <div class="form-group">
+                    <label class="form-label" for="passwordConfirm">Potvrdit heslo</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="password"
+                            id="passwordConfirm"
+                            class="form-input"
+                            placeholder="••••••••"
+                            autocomplete="new-password"
+                            required
+                        >
+                        <svg class="input-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        <button
+                            type="button"
+                            class="password-toggle"
+                            onclick="togglePassword('passwordConfirm')"
+                            aria-label="Zobrazit/skrýt heslo"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" id="passwordConfirm-eye-icon" aria-hidden="true">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                <circle cx="12" cy="12" r="3"/>
                             </svg>
-                        </div>
-                        <span class="checkbox-label">Zapamatovat si mě</span>
+                        </button>
                     </div>
-                    <a href="#" class="forgot-link">Zapomenuté heslo?</a>
+                    <p class="field-error" id="passwordConfirmError"></p>
                 </div>
 
                 <button type="submit" class="btn btn-primary" id="submitBtn">
-                    <span class="btn-text">Přihlásit se</span>
+                    <span class="btn-text">Zaregistrovat se</span>
                     <span class="spinner"></span>
                     <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -165,7 +231,7 @@
 
             <!-- Footer -->
             <div class="login-footer">
-                <p>Nemáte účet? <a href="/register">Zaregistrujte se</a></p>
+                <p>Už máte účet? <a href="/login">Přihlaste se</a></p>
             </div>
         </div>
     </div>
@@ -177,14 +243,21 @@
         import Config from '/static/js/config.js';
 
         // DOM elements
-        const form = document.getElementById('loginForm');
+        const form = document.getElementById('registerForm');
+        const displayNameInput = document.getElementById('displayName');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
-        const rememberMeCheckbox = document.getElementById('rememberMe');
+        const passwordConfirmInput = document.getElementById('passwordConfirm');
         const submitBtn = document.getElementById('submitBtn');
         const formError = document.getElementById('formError');
         const emailError = document.getElementById('emailError');
         const passwordError = document.getElementById('passwordError');
+        const passwordConfirmError = document.getElementById('passwordConfirmError');
+
+        // Password requirement elements
+        const reqLength = document.getElementById('req-length');
+        const reqUppercase = document.getElementById('req-uppercase');
+        const reqNumber = document.getElementById('req-number');
 
         // Check if already authenticated
         if (AuthStore.isAuthenticated()) {
@@ -192,9 +265,9 @@
         }
 
         // Toggle password visibility
-        window.togglePassword = function() {
-            const input = document.getElementById('password');
-            const icon = document.getElementById('eye-icon');
+        window.togglePassword = function(fieldId) {
+            const input = document.getElementById(fieldId);
+            const icon = document.getElementById(`${fieldId}-eye-icon`);
 
             if (input.type === 'password') {
                 input.type = 'text';
@@ -211,33 +284,32 @@
             }
         };
 
-        // Toggle remember me checkbox
-        rememberMeCheckbox.addEventListener('click', () => {
-            const checkbox = rememberMeCheckbox.querySelector('.checkbox');
-            const isChecked = checkbox.classList.toggle('checked');
-            rememberMeCheckbox.setAttribute('aria-checked', isChecked);
-        });
-
-        // Keyboard support for checkbox
-        rememberMeCheckbox.addEventListener('keydown', (e) => {
-            if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault();
-                rememberMeCheckbox.click();
-            }
-        });
-
         // Clear field errors on input
-        emailInput.addEventListener('input', () => {
-            emailInput.classList.remove('input-error');
-            emailError.classList.remove('visible');
+        function clearFieldError(input, errorEl) {
+            input.classList.remove('input-error');
+            errorEl.classList.remove('visible');
             formError.classList.remove('visible');
-        });
+        }
 
+        emailInput.addEventListener('input', () => clearFieldError(emailInput, emailError));
         passwordInput.addEventListener('input', () => {
-            passwordInput.classList.remove('input-error');
-            passwordError.classList.remove('visible');
-            formError.classList.remove('visible');
+            clearFieldError(passwordInput, passwordError);
+            validatePasswordRequirements(passwordInput.value);
         });
+        passwordConfirmInput.addEventListener('input', () => clearFieldError(passwordConfirmInput, passwordConfirmError));
+
+        // Validate password requirements in real-time
+        function validatePasswordRequirements(password) {
+            const hasLength = password.length >= 8;
+            const hasUppercase = /[A-Z]/.test(password);
+            const hasNumber = /[0-9]/.test(password);
+
+            reqLength.classList.toggle('valid', hasLength);
+            reqUppercase.classList.toggle('valid', hasUppercase);
+            reqNumber.classList.toggle('valid', hasNumber);
+
+            return hasLength && hasUppercase && hasNumber;
+        }
 
         // Validate email
         function validateEmail(email) {
@@ -277,12 +349,15 @@
             formError.classList.remove('visible');
             emailInput.classList.remove('input-error');
             passwordInput.classList.remove('input-error');
+            passwordConfirmInput.classList.remove('input-error');
             emailError.classList.remove('visible');
             passwordError.classList.remove('visible');
+            passwordConfirmError.classList.remove('visible');
 
+            const displayName = displayNameInput.value.trim();
             const email = emailInput.value.trim();
             const password = passwordInput.value;
-            const rememberMe = rememberMeCheckbox.querySelector('.checkbox').classList.contains('checked');
+            const passwordConfirm = passwordConfirmInput.value;
 
             // Validation
             let hasErrors = false;
@@ -298,18 +373,36 @@
             if (!password) {
                 showFieldError(passwordInput, passwordError, 'Zadejte heslo');
                 hasErrors = true;
+            } else if (password.length < 8) {
+                showFieldError(passwordInput, passwordError, 'Heslo musí mít alespoň 8 znaků');
+                hasErrors = true;
+            }
+
+            if (!passwordConfirm) {
+                showFieldError(passwordConfirmInput, passwordConfirmError, 'Potvrďte heslo');
+                hasErrors = true;
+            } else if (password !== passwordConfirm) {
+                showFieldError(passwordConfirmInput, passwordConfirmError, 'Hesla se neshodují');
+                hasErrors = true;
             }
 
             if (hasErrors) return;
 
-            // Set remember me preference before login
-            AuthStore.setRememberMe(rememberMe);
-
-            // Submit login
+            // Submit registration
             setLoading(true);
 
             try {
-                await api.auth.login(email, password);
+                const userData = {
+                    email,
+                    password,
+                    password_confirm: passwordConfirm,
+                };
+
+                if (displayName) {
+                    userData.display_name = displayName;
+                }
+
+                await api.auth.register(userData);
 
                 // Redirect to dashboard
                 window.location.href = Config.ROUTES.DASHBOARD;
@@ -317,22 +410,35 @@
                 setLoading(false);
 
                 if (error instanceof ApiError) {
-                    switch (error.status) {
-                        case 401:
-                            showError('Nesprávný e-mail nebo heslo');
-                            break;
-                        case 403:
-                            showError('Účet byl deaktivován');
-                            break;
-                        case 0:
-                            showError('Nepodařilo se připojit k serveru');
-                            break;
-                        default:
-                            showError(error.message || 'Nastala chyba při přihlášení');
+                    // Handle specific error cases
+                    if (error.data) {
+                        // Field-specific errors from the API
+                        if (error.data.email) {
+                            showFieldError(emailInput, emailError, 'Tento e-mail je již registrován');
+                        } else if (error.data.password) {
+                            const pwdErrors = Array.isArray(error.data.password)
+                                ? error.data.password.join(' ')
+                                : error.data.password;
+                            showFieldError(passwordInput, passwordError, pwdErrors);
+                        } else if (error.data.password_confirm) {
+                            showFieldError(passwordConfirmInput, passwordConfirmError, 'Hesla se neshodují');
+                        } else if (error.data.error) {
+                            showError(error.data.error);
+                        } else {
+                            showError('Chyba při registraci. Zkontrolujte zadané údaje.');
+                        }
+                    } else {
+                        switch (error.status) {
+                            case 0:
+                                showError('Nepodařilo se připojit k serveru');
+                                break;
+                            default:
+                                showError(error.message || 'Nastala chyba při registraci');
+                        }
                     }
                 } else {
                     showError('Nastala neočekávaná chyba');
-                    console.error('Login error:', error);
+                    console.error('Registration error:', error);
                 }
             }
         });

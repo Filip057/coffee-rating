@@ -4,8 +4,8 @@
  * Centralized API client with authentication handling
  */
 
-import Config from './config.js';
-import AuthStore from './auth.js';
+import Config from '/static/js/config.js';
+import AuthStore from '/static/js/auth.js';
 
 class ApiError extends Error {
     constructor(status, data) {
@@ -191,11 +191,237 @@ const api = {
         },
     },
 
-    // Add more resource endpoints as needed:
-    // beans: { ... },
-    // reviews: { ... },
-    // groups: { ... },
-    // purchases: { ... },
+    /**
+     * Groups endpoints
+     */
+    groups: {
+        /**
+         * Get all groups where user is a member
+         * @returns {Promise<Array>}
+         */
+        async getMyGroups() {
+            return request(Config.GROUPS.MY_GROUPS);
+        },
+
+        /**
+         * Get group details
+         * @param {string} id - Group ID
+         * @returns {Promise<Object>}
+         */
+        async getGroup(id) {
+            return request(Config.GROUPS.DETAIL(id));
+        },
+
+        /**
+         * Get group members
+         * @param {string} id - Group ID
+         * @returns {Promise<Array>}
+         */
+        async getMembers(id) {
+            return request(Config.GROUPS.MEMBERS(id));
+        },
+
+        /**
+         * Join a group with invite code
+         * @param {string} id - Group ID
+         * @param {string} inviteCode - Invite code
+         * @returns {Promise<Object>}
+         */
+        async join(id, inviteCode) {
+            return request(Config.GROUPS.JOIN(id), {
+                method: 'POST',
+                body: JSON.stringify({ invite_code: inviteCode }),
+            });
+        },
+
+        /**
+         * Leave a group
+         * @param {string} id - Group ID
+         * @returns {Promise<void>}
+         */
+        async leave(id) {
+            return request(Config.GROUPS.LEAVE(id), {
+                method: 'POST',
+            });
+        },
+
+        /**
+         * Create a new group
+         * @param {Object} data - { name, description? }
+         * @returns {Promise<Object>}
+         */
+        async create(data) {
+            return request(Config.GROUPS.LIST, {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
+    },
+
+    /**
+     * Reviews/Library endpoints
+     */
+    reviews: {
+        /**
+         * Get user's coffee library
+         * @param {Object} options - { archived?: boolean, search?: string }
+         * @returns {Promise<Array>}
+         */
+        async getLibrary(options = {}) {
+            const params = new URLSearchParams();
+            if (options.archived) params.append('archived', 'true');
+            if (options.search) params.append('search', options.search);
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.REVIEWS.LIBRARY}?${query}` : Config.REVIEWS.LIBRARY;
+            return request(endpoint);
+        },
+
+        /**
+         * Add a bean to library
+         * @param {string} beanId - Coffee bean ID
+         * @returns {Promise<Object>}
+         */
+        async addToLibrary(beanId) {
+            return request(Config.REVIEWS.ADD_TO_LIBRARY, {
+                method: 'POST',
+                body: JSON.stringify({ bean_id: beanId }),
+            });
+        },
+
+        /**
+         * Get user's reviews
+         * @returns {Promise<Array>}
+         */
+        async getMyReviews() {
+            const data = await request(Config.REVIEWS.MY_REVIEWS);
+            // Handle paginated response
+            return Array.isArray(data) ? data : (data.results || []);
+        },
+
+        /**
+         * Get user's reviews count
+         * @returns {Promise<number>}
+         */
+        async getMyReviewsCount() {
+            const data = await request(`${Config.REVIEWS.MY_REVIEWS}?page_size=1`);
+            // Paginated response includes count
+            return data.count ?? (Array.isArray(data) ? data.length : 0);
+        },
+    },
+
+    /**
+     * Purchases endpoints
+     */
+    purchases: {
+        /**
+         * Get outstanding payments for current user
+         * @returns {Promise<{total_outstanding: number, count: number, shares: Array}>}
+         */
+        async getOutstanding() {
+            return request(Config.PURCHASES.MY_OUTSTANDING);
+        },
+
+        /**
+         * Get all purchases
+         * @param {Object} options - { group?: string }
+         * @returns {Promise<Array>}
+         */
+        async list(options = {}) {
+            const params = new URLSearchParams();
+            if (options.group) params.append('group', options.group);
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.PURCHASES.LIST}?${query}` : Config.PURCHASES.LIST;
+            return request(endpoint);
+        },
+    },
+
+    /**
+     * Analytics endpoints
+     */
+    analytics: {
+        /**
+         * Get dashboard summary
+         * @returns {Promise<{consumption: Object, taste_profile: Object, top_beans: Array}>}
+         */
+        async getDashboard() {
+            return request(Config.ANALYTICS.DASHBOARD);
+        },
+
+        /**
+         * Get user's consumption stats
+         * @param {Object} options - { start_date?: string, end_date?: string }
+         * @returns {Promise<Object>}
+         */
+        async getConsumption(options = {}) {
+            const params = new URLSearchParams();
+            if (options.start_date) params.append('start_date', options.start_date);
+            if (options.end_date) params.append('end_date', options.end_date);
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.ANALYTICS.MY_CONSUMPTION}?${query}` : Config.ANALYTICS.MY_CONSUMPTION;
+            return request(endpoint);
+        },
+
+        /**
+         * Get user's taste profile
+         * @returns {Promise<Object>}
+         */
+        async getTasteProfile() {
+            return request(Config.ANALYTICS.TASTE_PROFILE);
+        },
+
+        /**
+         * Get top beans
+         * @param {Object} options - { metric?: string, period?: number, limit?: number }
+         * @returns {Promise<Object>}
+         */
+        async getTopBeans(options = {}) {
+            const params = new URLSearchParams();
+            if (options.metric) params.append('metric', options.metric);
+            if (options.period) params.append('period', options.period.toString());
+            if (options.limit) params.append('limit', options.limit.toString());
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.ANALYTICS.TOP_BEANS}?${query}` : Config.ANALYTICS.TOP_BEANS;
+            return request(endpoint);
+        },
+    },
+
+    /**
+     * Beans endpoints
+     */
+    beans: {
+        /**
+         * Get all beans
+         * @returns {Promise<Array>}
+         */
+        async list() {
+            const data = await request(Config.BEANS.LIST);
+            // Handle paginated response
+            return Array.isArray(data) ? data : (data.results || []);
+        },
+
+        /**
+         * Get beans count (without fetching all data)
+         * @returns {Promise<number>}
+         */
+        async count() {
+            const data = await request(`${Config.BEANS.LIST}?page_size=1`);
+            // Paginated response includes count
+            return data.count || (Array.isArray(data) ? data.length : 0);
+        },
+
+        /**
+         * Get bean details
+         * @param {string} id - Bean ID
+         * @returns {Promise<Object>}
+         */
+        async get(id) {
+            return request(Config.BEANS.DETAIL(id));
+        },
+    },
 };
 
 export { api, ApiError };

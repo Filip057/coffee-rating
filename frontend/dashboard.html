@@ -4,18 +4,112 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2C1810">
-    <title>Kavárna – Dashboard</title>
+    <title>Kavarna - Dashboard</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/variables.css">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+
+    <style>
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--latte) 25%, var(--milk-foam) 50%, var(--latte) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: var(--radius-md);
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .skeleton-text {
+            height: 1em;
+            width: 100px;
+            display: inline-block;
+        }
+
+        .skeleton-text.short { width: 60px; }
+        .skeleton-text.long { width: 150px; }
+
+        /* User menu dropdown */
+        .user-menu { position: relative; }
+
+        .user-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: var(--porcelain);
+            border: 1px solid var(--latte);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            min-width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all var(--transition-base);
+            z-index: var(--z-dropdown);
+        }
+
+        .user-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .user-dropdown-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--latte);
+        }
+
+        .user-dropdown-name {
+            font-weight: 500;
+            color: var(--espresso);
+        }
+
+        .user-dropdown-email {
+            font-size: var(--text-sm);
+            color: var(--steam);
+            margin-top: 2px;
+        }
+
+        .user-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            color: var(--espresso);
+            text-decoration: none;
+            transition: background var(--transition-base);
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-size: var(--text-base);
+        }
+
+        .user-dropdown-item:hover { background: var(--milk-foam); }
+        .user-dropdown-item.danger { color: var(--error); }
+        .user-dropdown-item svg { width: 18px; height: 18px; color: var(--steam); }
+        .user-dropdown-item.danger svg { color: var(--error); }
+        .user-dropdown-divider { height: 1px; background: var(--latte); margin: 4px 0; }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 24px 16px;
+            color: var(--steam);
+        }
+    </style>
 </head>
 <body class="dashboard">
     <div class="app">
@@ -23,18 +117,44 @@
         <header class="header">
             <div class="header-top">
                 <div class="greeting">
-                    <p class="greeting-text">Dobré ráno ☀️</p>
-                    <h1 class="greeting-name">Jan Novák</h1>
+                    <p class="greeting-text" id="greetingText">Dobry den</p>
+                    <h1 class="greeting-name" id="userName">
+                        <span class="skeleton skeleton-text long"></span>
+                    </h1>
                 </div>
                 <div class="header-actions">
-                    <button class="icon-btn" aria-label="Oznámení">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                        </svg>
-                        <span class="notification-badge">3</span>
-                    </button>
-                    <div class="avatar" role="button" aria-label="Profil">JN</div>
+                    <div class="user-menu">
+                        <div class="avatar" role="button" aria-label="Uzivatelske menu" id="userAvatar" tabindex="0">?</div>
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="user-dropdown-header">
+                                <div class="user-dropdown-name" id="dropdownName">-</div>
+                                <div class="user-dropdown-email" id="dropdownEmail">-</div>
+                            </div>
+                            <a href="#" class="user-dropdown-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                                Muj profil
+                            </a>
+                            <a href="#" class="user-dropdown-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <circle cx="12" cy="12" r="3"/>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                </svg>
+                                Nastaveni
+                            </a>
+                            <div class="user-dropdown-divider"></div>
+                            <button class="user-dropdown-item danger" id="logoutBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Odhlasit se
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -42,15 +162,15 @@
         <!-- Quick Stats -->
         <div class="quick-stats">
             <div class="quick-stat">
-                <div class="quick-stat-value">47</div>
-                <div class="quick-stat-label">Hodnocení</div>
+                <div class="quick-stat-value" id="statReviews">-</div>
+                <div class="quick-stat-label">Hodnoceni</div>
             </div>
             <div class="quick-stat">
-                <div class="quick-stat-value">32</div>
-                <div class="quick-stat-label">V knihovně</div>
+                <div class="quick-stat-value" id="statLibrary">-</div>
+                <div class="quick-stat-label">V knihovne</div>
             </div>
             <div class="quick-stat">
-                <div class="quick-stat-value">2</div>
+                <div class="quick-stat-value" id="statGroups">-</div>
                 <div class="quick-stat-label">Skupiny</div>
             </div>
         </div>
@@ -62,8 +182,8 @@
                     <div class="nav-card-icon groups">👥</div>
                     <div class="nav-card-content">
                         <h3>Skupiny</h3>
-                        <p>2 aktivní skupiny</p>
-                        <span class="nav-card-badge">8 členů celkem</span>
+                        <p id="cardGroupsCount">Nacitam...</p>
+                        <span class="nav-card-badge" id="cardGroupsMembers"></span>
                     </div>
                 </a>
 
@@ -71,8 +191,8 @@
                     <div class="nav-card-icon library">📚</div>
                     <div class="nav-card-content">
                         <h3>Moje knihovna</h3>
-                        <p>32 káv</p>
-                        <span class="nav-card-badge">3 nové tento měsíc</span>
+                        <p id="cardLibraryCount">Nacitam...</p>
+                        <span class="nav-card-badge" id="cardLibraryBadge"></span>
                     </div>
                 </a>
 
@@ -80,17 +200,17 @@
                     <div class="nav-card-icon discover">🔍</div>
                     <div class="nav-card-content">
                         <h3>Objevovat</h3>
-                        <p>Katalog káv</p>
-                        <span class="nav-card-badge">156 káv</span>
+                        <p>Katalog kav</p>
+                        <span class="nav-card-badge" id="cardBeansCount">-</span>
                     </div>
                 </a>
 
                 <a href="#" class="nav-card animate-fade-in-up delay-4">
                     <div class="nav-card-icon purchases">💰</div>
                     <div class="nav-card-content">
-                        <h3>Nákupy</h3>
+                        <h3>Nakupy</h3>
                         <p>Platby & dluhy</p>
-                        <span class="nav-card-badge alert">Dlužíš 187 Kč</span>
+                        <span class="nav-card-badge" id="cardDebtBadge">-</span>
                     </div>
                 </a>
             </div>
@@ -101,103 +221,46 @@
             <div class="section-header">
                 <h2 class="section-title">Moje skupiny</h2>
                 <a href="#" class="section-link">
-                    Všechny
+                    Vsechny
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </a>
             </div>
-            <div class="groups-scroll">
-                <a href="#" class="group-chip">
-                    <div class="group-chip-icon">👨‍💻</div>
-                    <div class="group-chip-info">
-                        <h4>Kancelář Praha</h4>
-                        <p>8 členů</p>
-                    </div>
-                </a>
-                <a href="#" class="group-chip">
-                    <div class="group-chip-icon">☕</div>
-                    <div class="group-chip-info">
-                        <h4>Kavárníci Brno</h4>
-                        <p>15 členů</p>
-                    </div>
-                </a>
-                <a href="#" class="group-chip group-chip-add">
-                    <div class="group-chip-icon">+</div>
-                    <div class="group-chip-info">
-                        <h4>Přidat skupinu</h4>
-                        <p>Vytvořit nebo připojit</p>
-                    </div>
-                </a>
+            <div class="groups-scroll" id="groupsList">
+                <div class="skeleton" style="width: 140px; height: 60px; flex-shrink: 0;"></div>
+                <div class="skeleton" style="width: 140px; height: 60px; flex-shrink: 0;"></div>
             </div>
         </section>
 
-        <!-- Recent Activity -->
-        <section class="section">
+        <!-- Outstanding Payments -->
+        <section class="section" id="paymentsSection" style="display: none;">
             <div class="section-header">
-                <h2 class="section-title">Nedávná aktivita</h2>
+                <h2 class="section-title">Nezaplacene platby</h2>
             </div>
-
-            <div class="activity-item">
-                <div class="activity-icon">💰</div>
-                <div class="activity-content">
-                    <p class="activity-text"><strong>Martin K.</strong> ti dluží 89 Kč</p>
-                    <p class="activity-time">Ethiopia Yirgacheffe • před 2 dny</p>
-                </div>
-                <div class="activity-action">
-                    <button class="btn-small">Připomenout</button>
-                </div>
-            </div>
-
-            <div class="activity-item">
-                <div class="activity-icon">⭐</div>
-                <div class="activity-content">
-                    <p class="activity-text"><strong>Lucie P.</strong> ohodnotila Colombia Huila</p>
-                    <p class="activity-time">Kancelář Praha • včera</p>
-                </div>
-            </div>
-
-            <div class="activity-item">
-                <div class="activity-icon">🛒</div>
-                <div class="activity-content">
-                    <p class="activity-text">Nový nákup ve skupině <strong>Kavárníci Brno</strong></p>
-                    <p class="activity-time">Kenya AA Nyeri • dnes</p>
-                </div>
-                <div class="activity-action">
-                    <button class="btn-small primary">Zaplatit</button>
-                </div>
-            </div>
+            <div id="paymentsList"></div>
         </section>
     </div>
 
     <!-- FAB Overlay -->
-    <div class="fab-overlay" id="fabOverlay" onclick="toggleFab()"></div>
+    <div class="fab-overlay" id="fabOverlay"></div>
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
-        <a href="#" class="fab-menu-item">
-            <span>☕</span>
-            <span>Přidat kávu</span>
-        </a>
-        <a href="#" class="fab-menu-item">
-            <span>⭐</span>
-            <span>Nové hodnocení</span>
-        </a>
-        <a href="#" class="fab-menu-item">
-            <span>🛒</span>
-            <span>Zaznamenat nákup</span>
-        </a>
+        <a href="#" class="fab-menu-item"><span>☕</span><span>Pridat kavu</span></a>
+        <a href="#" class="fab-menu-item"><span>⭐</span><span>Nove hodnoceni</span></a>
+        <a href="#" class="fab-menu-item"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav" aria-label="Hlavní navigace">
+    <nav class="bottom-nav" aria-label="Hlavni navigace">
         <div class="nav-items">
             <a class="nav-item active" href="#" aria-current="page">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                     <path d="M9 22V12h6v10"/>
                 </svg>
-                <span>Domů</span>
+                <span>Domu</span>
             </a>
             <a class="nav-item" href="#">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -207,7 +270,7 @@
                 <span>Hledat</span>
             </a>
 
-            <button class="fab" id="fabBtn" onclick="toggleFab()" aria-label="Rychlé akce" aria-expanded="false">
+            <button class="fab" id="fabBtn" aria-label="Rychle akce" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -232,50 +295,286 @@
         </div>
     </nav>
 
-    <script>
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // DOM Elements
+        const userNameEl = document.getElementById('userName');
+        const userAvatarEl = document.getElementById('userAvatar');
+        const userDropdown = document.getElementById('userDropdown');
+        const dropdownNameEl = document.getElementById('dropdownName');
+        const dropdownEmailEl = document.getElementById('dropdownEmail');
+        const greetingTextEl = document.getElementById('greetingText');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const fabBtn = document.getElementById('fabBtn');
+        const fabMenu = document.getElementById('fabMenu');
+        const fabOverlay = document.getElementById('fabOverlay');
+
+        // Update greeting based on time
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 12) {
+                greetingTextEl.textContent = 'Dobre rano';
+            } else if (hour < 18) {
+                greetingTextEl.textContent = 'Dobre odpoledne';
+            } else {
+                greetingTextEl.textContent = 'Dobry vecer';
+            }
+        }
+
+        // Load user data from storage
+        function loadUserData() {
+            const user = AuthStore.getUser();
+            const displayName = AuthStore.getDisplayName();
+            const initials = AuthStore.getUserInitials();
+
+            userNameEl.textContent = displayName;
+            userAvatarEl.textContent = initials;
+
+            if (user) {
+                dropdownNameEl.textContent = user.display_name || displayName;
+                dropdownEmailEl.textContent = user.email || '';
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Format currency
+        function formatCZK(amount) {
+            return new Intl.NumberFormat('cs-CZ', {
+                style: 'currency',
+                currency: 'CZK',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Render dashboard data (all from single API call)
+        function renderDashboard(data) {
+            // Quick stats
+            document.getElementById('statReviews').textContent = data.stats.reviews_count;
+            document.getElementById('statLibrary').textContent = data.stats.library_count;
+            document.getElementById('statGroups').textContent = data.stats.groups_count;
+
+            // Groups card
+            const groupsCount = data.stats.groups_count;
+            document.getElementById('cardGroupsCount').textContent = groupsCount === 0
+                ? 'Zadne skupiny'
+                : `${groupsCount} ${groupsCount === 1 ? 'skupina' : groupsCount < 5 ? 'skupiny' : 'skupin'}`;
+
+            const cardGroupsMembers = document.getElementById('cardGroupsMembers');
+            if (data.groups.total_members > 0) {
+                cardGroupsMembers.textContent = `${data.groups.total_members} clenu celkem`;
+            } else {
+                cardGroupsMembers.textContent = '';
+            }
+
+            // Library card
+            const libraryCount = data.library.count;
+            document.getElementById('cardLibraryCount').textContent = libraryCount === 0
+                ? 'Prazdna knihovna'
+                : `${libraryCount} kav`;
+
+            const cardLibraryBadge = document.getElementById('cardLibraryBadge');
+            if (data.library.recent_count > 0) {
+                cardLibraryBadge.textContent = `${data.library.recent_count} novych tento mesic`;
+            } else {
+                cardLibraryBadge.textContent = '';
+            }
+
+            // Beans card
+            document.getElementById('cardBeansCount').textContent = `${data.beans.total_count} kav`;
+
+            // Payments card
+            const cardDebtBadge = document.getElementById('cardDebtBadge');
+            if (data.payments.total_outstanding > 0) {
+                cardDebtBadge.textContent = `Dluzis ${formatCZK(data.payments.total_outstanding)}`;
+                cardDebtBadge.classList.add('alert');
+            } else {
+                cardDebtBadge.textContent = 'Vse zaplaceno';
+                cardDebtBadge.classList.remove('alert');
+            }
+
+            // Render groups list
+            renderGroups(data.groups.list);
+
+            // Render payments
+            renderPayments(data.payments);
+        }
+
+        // Render groups chips
+        function renderGroups(groups) {
+            const groupsList = document.getElementById('groupsList');
+            let html = '';
+
+            groups.slice(0, 5).forEach(group => {
+                html += `
+                    <a href="#" class="group-chip" data-group-id="${group.id}">
+                        <div class="group-chip-icon">${group.icon || '👥'}</div>
+                        <div class="group-chip-info">
+                            <h4>${escapeHtml(group.name)}</h4>
+                            <p>${group.member_count || 0} clenu</p>
+                        </div>
+                    </a>
+                `;
+            });
+
+            html += `
+                <a href="#" class="group-chip group-chip-add">
+                    <div class="group-chip-icon">+</div>
+                    <div class="group-chip-info">
+                        <h4>Pridat skupinu</h4>
+                        <p>Vytvorit nebo pripojit</p>
+                    </div>
+                </a>
+            `;
+
+            groupsList.innerHTML = html;
+        }
+
+        // Render payments list
+        function renderPayments(payments) {
+            const paymentsSection = document.getElementById('paymentsSection');
+            const paymentsList = document.getElementById('paymentsList');
+
+            if (payments.count === 0) {
+                paymentsSection.style.display = 'none';
+                return;
+            }
+
+            paymentsSection.style.display = 'block';
+
+            let html = '';
+            payments.list.forEach(payment => {
+                html += `
+                    <div class="activity-item">
+                        <div class="activity-icon">💰</div>
+                        <div class="activity-content">
+                            <p class="activity-text">Dluzis <strong>${formatCZK(payment.amount_czk)}</strong></p>
+                            <p class="activity-time">${escapeHtml(payment.bean_name || 'Neznama kava')}${payment.group_name ? ' • ' + escapeHtml(payment.group_name) : ''}</p>
+                        </div>
+                        <div class="activity-action">
+                            <button class="btn-small primary">Zaplatit</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            paymentsList.innerHTML = html;
+        }
+
+        // Load dashboard data from API
+        async function loadDashboard() {
+            try {
+                const data = await api.analytics.getDashboard();
+                renderDashboard(data);
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                // Show error state
+                document.getElementById('statReviews').textContent = '0';
+                document.getElementById('statLibrary').textContent = '0';
+                document.getElementById('statGroups').textContent = '0';
+                document.getElementById('cardGroupsCount').textContent = 'Chyba';
+                document.getElementById('cardLibraryCount').textContent = 'Chyba';
+                document.getElementById('cardBeansCount').textContent = '-';
+                document.getElementById('cardDebtBadge').textContent = '-';
+
+                // If 401, redirect to login
+                if (error instanceof ApiError && error.status === 401) {
+                    AuthStore.logout();
+                    window.location.href = Config.ROUTES.LOGIN;
+                }
+            }
+        }
+
+        // Toggle user dropdown
+        let dropdownOpen = false;
+
+        function toggleDropdown() {
+            dropdownOpen = !dropdownOpen;
+            userDropdown.classList.toggle('open', dropdownOpen);
+        }
+
+        function closeDropdown() {
+            dropdownOpen = false;
+            userDropdown.classList.remove('open');
+        }
+
+        userAvatarEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleDropdown();
+        });
+
+        userAvatarEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                toggleDropdown();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!userDropdown.contains(e.target) && !userAvatarEl.contains(e.target)) {
+                closeDropdown();
+            }
+        });
+
+        // Logout handler
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await api.auth.logout();
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                AuthStore.logout();
+                window.location.href = Config.ROUTES.LOGIN;
+            }
+        });
+
+        // FAB toggle
         let fabOpen = false;
 
         function toggleFab() {
             fabOpen = !fabOpen;
-            const btn = document.getElementById('fabBtn');
-            const menu = document.getElementById('fabMenu');
-            const overlay = document.getElementById('fabOverlay');
-
-            btn.setAttribute('aria-expanded', fabOpen);
+            fabBtn.setAttribute('aria-expanded', fabOpen);
 
             if (fabOpen) {
-                btn.style.transform = 'rotate(45deg)';
-                menu.classList.add('open');
-                overlay.classList.add('open');
+                fabBtn.style.transform = 'rotate(45deg)';
+                fabMenu.classList.add('open');
+                fabOverlay.classList.add('open');
             } else {
-                btn.style.transform = 'rotate(0deg)';
-                menu.classList.remove('open');
-                overlay.classList.remove('open');
+                fabBtn.style.transform = 'rotate(0deg)';
+                fabMenu.classList.remove('open');
+                fabOverlay.classList.remove('open');
             }
         }
 
-        // Close FAB menu on Escape key
+        fabBtn.addEventListener('click', toggleFab);
+        fabOverlay.addEventListener('click', toggleFab);
+
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && fabOpen) {
-                toggleFab();
+            if (e.key === 'Escape') {
+                if (fabOpen) toggleFab();
+                if (dropdownOpen) closeDropdown();
             }
         });
 
-        // Dynamic greeting based on time
-        function updateGreeting() {
-            const hour = new Date().getHours();
-            const greetingEl = document.querySelector('.greeting-text');
-
-            if (hour < 12) {
-                greetingEl.textContent = 'Dobré ráno ☀️';
-            } else if (hour < 18) {
-                greetingEl.textContent = 'Dobré odpoledne 👋';
-            } else {
-                greetingEl.textContent = 'Dobrý večer 🌙';
-            }
-        }
-
+        // Initialize
         updateGreeting();
+        loadUserData();
+        loadDashboard();
     </script>
 </body>
 </html>
