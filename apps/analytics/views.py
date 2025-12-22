@@ -242,7 +242,7 @@ def dashboard(request):
     library_recent = library_entries.filter(added_at__gte=thirty_days_ago).count()
 
     # Get user's reviews count
-    reviews_count = Review.objects.filter(user=user).count()
+    reviews_count = Review.objects.filter(author=user).count()
 
     # Get total beans count
     beans_count = CoffeeBean.objects.filter(is_active=True).count()
