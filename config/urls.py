@@ -50,6 +50,7 @@ urlpatterns = [
     path('dashboard.html', serve_frontend, {'page': 'dashboard'}, name='dashboard-html'),
     path('register', serve_frontend, {'page': 'register'}, name='register'),
     path('register.html', serve_frontend, {'page': 'register'}, name='register-html'),
+    path('groups/create/', serve_frontend, {'page': 'groups/create'}, name='groups-create'),
 ]
 
 # Media files (development only)

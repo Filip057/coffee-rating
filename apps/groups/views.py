@@ -265,3 +265,42 @@ def my_groups(request):
 
     serializer = GroupListSerializer(groups, many=True, context={'request': request})
     return Response(serializer.data)
+
+
+@extend_schema(
+    request=JoinGroupSerializer,
+    responses={201: GroupMemberSerializer},
+    description="Join a group using only the invite code.",
+    tags=['groups'],
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def join_by_code(request):
+    """Join a group using invite code (without knowing the group ID)."""
+    serializer = JoinGroupSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    invite_code = serializer.validated_data['invite_code']
+
+    # Find group by invite code
+    try:
+        group = Group.objects.get(invite_code=invite_code)
+    except Group.DoesNotExist:
+        return Response(
+            {'error': 'Neplatny kod pozvanky'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        membership = join_group(
+            group_id=group.id,
+            user=request.user,
+            invite_code=invite_code
+        )
+    except AlreadyMemberError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except InvalidInviteCodeError as e:
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    output_serializer = GroupMemberSerializer(membership)
+    return Response(output_serializer.data, status=status.HTTP_201_CREATED)

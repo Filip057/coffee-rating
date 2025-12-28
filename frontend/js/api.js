@@ -235,6 +235,18 @@ const api = {
         },
 
         /**
+         * Join a group using only invite code
+         * @param {string} inviteCode - Invite code
+         * @returns {Promise<Object>}
+         */
+        async joinByCode(inviteCode) {
+            return request(Config.GROUPS.JOIN_BY_CODE, {
+                method: 'POST',
+                body: JSON.stringify({ invite_code: inviteCode }),
+            });
+        },
+
+        /**
          * Leave a group
          * @param {string} id - Group ID
          * @returns {Promise<void>}

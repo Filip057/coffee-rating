@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Kavarna - Pridat skupinu</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+
+    <style>
+        body {
+            min-height: 100vh;
+            background: var(--milk-foam);
+        }
+
+        .page-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        /* Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--porcelain);
+            border: 1px solid var(--latte);
+            border-radius: var(--radius-full);
+            color: var(--espresso);
+            text-decoration: none;
+            transition: all var(--transition-base);
+        }
+
+        .back-btn:hover {
+            background: var(--latte);
+        }
+
+        .page-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--espresso);
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 14px 16px;
+            font-size: var(--text-base);
+            font-weight: 500;
+            font-family: var(--font-body);
+            color: var(--steam);
+            background: var(--porcelain);
+            border: 1px solid var(--latte);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+
+        .tab-btn:hover {
+            background: var(--milk-foam);
+            color: var(--espresso);
+        }
+
+        .tab-btn.active {
+            background: var(--espresso);
+            color: var(--porcelain);
+            border-color: var(--espresso);
+        }
+
+        /* Card */
+        .card {
+            background: var(--porcelain);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .card + .card {
+            margin-top: 16px;
+        }
+
+        .card.hidden {
+            display: none;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 500;
+            color: var(--espresso);
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            font-size: var(--text-sm);
+            color: var(--steam);
+            margin-bottom: 24px;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--espresso);
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: var(--text-base);
+            font-family: var(--font-body);
+            color: var(--espresso);
+            background: var(--milk-foam);
+            border: 1px solid var(--latte);
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-base);
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--caramel);
+            box-shadow: 0 0 0 3px rgba(164, 116, 73, 0.15);
+        }
+
+        .form-input::placeholder {
+            color: var(--steam);
+        }
+
+        .form-input.input-error {
+            border-color: var(--error);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Error & Success messages */
+        .form-error, .form-success {
+            display: none;
+            padding: 12px 16px;
+            border-radius: var(--radius-lg);
+            font-size: var(--text-base);
+            margin-bottom: 20px;
+        }
+
+        .form-error {
+            background: rgba(184, 92, 92, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .form-success {
+            background: rgba(92, 184, 92, 0.1);
+            border: 1px solid #5cb85c;
+            color: #3d8b3d;
+        }
+
+        .form-error.visible, .form-success.visible {
+            display: block;
+        }
+
+        .field-error {
+            display: none;
+            font-size: 0.75rem;
+            color: var(--error);
+            margin-top: 6px;
+        }
+
+        .field-error.visible {
+            display: block;
+        }
+
+        /* Checkbox */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--latte);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-base);
+            flex-shrink: 0;
+        }
+
+        .checkbox svg {
+            opacity: 0;
+            transition: opacity var(--transition-base);
+        }
+
+        .checkbox.checked {
+            background: var(--caramel);
+            border-color: var(--caramel);
+        }
+
+        .checkbox.checked svg {
+            opacity: 1;
+        }
+
+        .checkbox-label {
+            font-size: var(--text-base);
+            color: var(--espresso);
+        }
+
+        /* Button */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 24px;
+            font-size: var(--text-base);
+            font-weight: 500;
+            font-family: var(--font-body);
+            border: none;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            position: relative;
+        }
+
+        .btn-primary {
+            background: var(--espresso);
+            color: var(--porcelain);
+        }
+
+        .btn-primary:hover {
+            background: var(--dark-roast);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--caramel);
+            color: var(--porcelain);
+        }
+
+        .btn-secondary:hover {
+            background: #8a6340;
+            transform: translateY(-1px);
+        }
+
+        .btn-loading .btn-text {
+            opacity: 0;
+        }
+
+        .btn-loading .spinner {
+            display: block;
+        }
+
+        .spinner {
+            display: none;
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--porcelain);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Invite code input styling */
+        .invite-code-input {
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 500;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Pridat skupinu</h1>
+        </header>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" id="tabCreate" data-tab="create">
+                Vytvorit novou
+            </button>
+            <button class="tab-btn" id="tabJoin" data-tab="join">
+                Pripojit se
+            </button>
+        </div>
+
+        <!-- Create Group Card -->
+        <div class="card animate-fade-in-up" id="createCard">
+            <h2 class="section-title">Vytvorit novou skupinu</h2>
+            <p class="section-subtitle">
+                Skupina slouzi ke sdileni kavy, nakupu a hodnoceni s ostatnimi cleny.
+            </p>
+
+            <!-- Error -->
+            <div class="form-error" id="createFormError" role="alert"></div>
+
+            <form id="createGroupForm" novalidate>
+                <!-- Nazev -->
+                <div class="form-group">
+                    <label class="form-label" for="groupName">Nazev skupiny</label>
+                    <input
+                        type="text"
+                        id="groupName"
+                        class="form-input"
+                        placeholder="Napr. Office Coffee Club"
+                        required
+                    >
+                    <p class="field-error" id="groupNameError"></p>
+                </div>
+
+                <!-- Popis -->
+                <div class="form-group">
+                    <label class="form-label" for="groupDescription">Popis (volitelne)</label>
+                    <textarea
+                        id="groupDescription"
+                        class="form-input"
+                        rows="3"
+                        placeholder="Kratky popis skupiny"
+                    ></textarea>
+                </div>
+
+                <!-- Soukromi -->
+                <div class="form-group">
+                    <div class="checkbox-wrapper" id="privateGroup" role="checkbox" aria-checked="true" tabindex="0">
+                        <div class="checkbox checked" aria-hidden="true">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </div>
+                        <span class="checkbox-label">
+                            Soukroma skupina (pristup pouze pres pozvanku)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-primary" id="createGroupBtn">
+                    <span class="btn-text">Vytvorit skupinu</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Join Group Card -->
+        <div class="card animate-fade-in-up hidden" id="joinCard">
+            <h2 class="section-title">Pripojit se ke skupine</h2>
+            <p class="section-subtitle">
+                Zadejte kod pozvanky, ktery jste obdrzeli od clena skupiny.
+            </p>
+
+            <!-- Error / Success -->
+            <div class="form-error" id="joinFormError" role="alert"></div>
+            <div class="form-success" id="joinFormSuccess" role="status"></div>
+
+            <form id="joinGroupForm" novalidate>
+                <!-- Kod pozvanky -->
+                <div class="form-group">
+                    <label class="form-label" for="inviteCode">Kod pozvanky</label>
+                    <input
+                        type="text"
+                        id="inviteCode"
+                        class="form-input invite-code-input"
+                        placeholder="XXXXXXXX"
+                        maxlength="16"
+                        required
+                    >
+                    <p class="field-error" id="inviteCodeError"></p>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-secondary" id="joinGroupBtn">
+                    <span class="btn-text">Pripojit se</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // Tab switching
+        const tabCreate = document.getElementById('tabCreate');
+        const tabJoin = document.getElementById('tabJoin');
+        const createCard = document.getElementById('createCard');
+        const joinCard = document.getElementById('joinCard');
+
+        function switchTab(tab) {
+            if (tab === 'create') {
+                tabCreate.classList.add('active');
+                tabJoin.classList.remove('active');
+                createCard.classList.remove('hidden');
+                joinCard.classList.add('hidden');
+            } else {
+                tabJoin.classList.add('active');
+                tabCreate.classList.remove('active');
+                joinCard.classList.remove('hidden');
+                createCard.classList.add('hidden');
+            }
+        }
+
+        tabCreate.addEventListener('click', () => switchTab('create'));
+        tabJoin.addEventListener('click', () => switchTab('join'));
+
+        // ========================================
+        // CREATE GROUP FORM
+        // ========================================
+        const createForm = document.getElementById('createGroupForm');
+        const nameInput = document.getElementById('groupName');
+        const descriptionInput = document.getElementById('groupDescription');
+        const privateCheckbox = document.getElementById('privateGroup');
+        const createErrorBox = document.getElementById('createFormError');
+        const nameError = document.getElementById('groupNameError');
+        const createBtn = document.getElementById('createGroupBtn');
+
+        // Checkbox toggle
+        privateCheckbox.addEventListener('click', () => {
+            const box = privateCheckbox.querySelector('.checkbox');
+            const checked = box.classList.toggle('checked');
+            privateCheckbox.setAttribute('aria-checked', checked);
+        });
+
+        privateCheckbox.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                privateCheckbox.click();
+            }
+        });
+
+        function showCreateError(message) {
+            createErrorBox.textContent = message;
+            createErrorBox.classList.add('visible');
+        }
+
+        function setCreateLoading(loading) {
+            createBtn.classList.toggle('btn-loading', loading);
+            createBtn.disabled = loading;
+        }
+
+        // Clear errors on input
+        nameInput.addEventListener('input', () => {
+            nameInput.classList.remove('input-error');
+            nameError.classList.remove('visible');
+            createErrorBox.classList.remove('visible');
+        });
+
+        createForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            createErrorBox.classList.remove('visible');
+            nameError.classList.remove('visible');
+            nameInput.classList.remove('input-error');
+
+            const name = nameInput.value.trim();
+            const description = descriptionInput.value.trim();
+            const isPrivate = privateCheckbox
+                .querySelector('.checkbox')
+                .classList.contains('checked');
+
+            if (!name) {
+                nameInput.classList.add('input-error');
+                nameError.textContent = 'Zadejte nazev skupiny';
+                nameError.classList.add('visible');
+                return;
+            }
+
+            setCreateLoading(true);
+
+            try {
+                const group = await api.groups.create({
+                    name,
+                    description,
+                    is_private: isPrivate
+                });
+
+                // Redirect to dashboard
+                window.location.href = Config.ROUTES.DASHBOARD;
+
+            } catch (error) {
+                setCreateLoading(false);
+
+                if (error instanceof ApiError) {
+                    if (error.status === 400) {
+                        showCreateError(error.message || 'Neplatna data');
+                    } else if (error.status === 401) {
+                        showCreateError('Prihlaseni vyprselo');
+                        setTimeout(() => {
+                            window.location.href = Config.ROUTES.LOGIN;
+                        }, 1500);
+                    } else {
+                        showCreateError('Nepodarilo se vytvorit skupinu');
+                    }
+                } else {
+                    showCreateError('Neocekavana chyba');
+                    console.error(error);
+                }
+            }
+        });
+
+        // ========================================
+        // JOIN GROUP FORM
+        // ========================================
+        const joinForm = document.getElementById('joinGroupForm');
+        const inviteCodeInput = document.getElementById('inviteCode');
+        const joinErrorBox = document.getElementById('joinFormError');
+        const joinSuccessBox = document.getElementById('joinFormSuccess');
+        const inviteCodeError = document.getElementById('inviteCodeError');
+        const joinBtn = document.getElementById('joinGroupBtn');
+
+        function showJoinError(message) {
+            joinSuccessBox.classList.remove('visible');
+            joinErrorBox.textContent = message;
+            joinErrorBox.classList.add('visible');
+        }
+
+        function showJoinSuccess(message) {
+            joinErrorBox.classList.remove('visible');
+            joinSuccessBox.textContent = message;
+            joinSuccessBox.classList.add('visible');
+        }
+
+        function setJoinLoading(loading) {
+            joinBtn.classList.toggle('btn-loading', loading);
+            joinBtn.disabled = loading;
+        }
+
+        // Clear errors on input
+        inviteCodeInput.addEventListener('input', () => {
+            inviteCodeInput.classList.remove('input-error');
+            inviteCodeError.classList.remove('visible');
+            joinErrorBox.classList.remove('visible');
+            joinSuccessBox.classList.remove('visible');
+        });
+
+        joinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            joinErrorBox.classList.remove('visible');
+            joinSuccessBox.classList.remove('visible');
+            inviteCodeError.classList.remove('visible');
+            inviteCodeInput.classList.remove('input-error');
+
+            const inviteCode = inviteCodeInput.value.trim().toUpperCase();
+
+            if (!inviteCode) {
+                inviteCodeInput.classList.add('input-error');
+                inviteCodeError.textContent = 'Zadejte kod pozvanky';
+                inviteCodeError.classList.add('visible');
+                return;
+            }
+
+            setJoinLoading(true);
+
+            try {
+                const result = await api.groups.joinByCode(inviteCode);
+
+                showJoinSuccess('Uspesne jste se pripojili ke skupine!');
+
+                // Redirect to dashboard after short delay
+                setTimeout(() => {
+                    window.location.href = Config.ROUTES.DASHBOARD;
+                }, 1500);
+
+            } catch (error) {
+                setJoinLoading(false);
+
+                if (error instanceof ApiError) {
+                    if (error.status === 400) {
+                        const message = error.data?.error || error.message || 'Neplatny kod pozvanky';
+                        showJoinError(message);
+                    } else if (error.status === 401) {
+                        showJoinError('Prihlaseni vyprselo');
+                        setTimeout(() => {
+                            window.location.href = Config.ROUTES.LOGIN;
+                        }, 1500);
+                    } else {
+                        showJoinError('Nepodarilo se pripojit ke skupine');
+                    }
+                } else {
+                    showJoinError('Neocekavana chyba');
+                    console.error(error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

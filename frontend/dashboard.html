@@ -248,7 +248,7 @@
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
         <a href="#" class="fab-menu-item"><span>☕</span><span>Pridat kavu</span></a>
-        <a href="#" class="fab-menu-item"><span>⭐</span><span>Nove hodnoceni</span></a>
+        <a href="${Config.ROUTES.REVIEW_CREATE}" class="fab-menu-item"><span>⭐</span><span>Nove hodnoceni</span></a>
         <a href="#" class="fab-menu-item"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 
@@ -433,7 +433,7 @@
             });
 
             html += `
-                <a href="#" class="group-chip group-chip-add">
+                <a href="${Config.ROUTES.GROUP_CREATE}" class="group-chip group-chip-add">
                     <div class="group-chip-icon">+</div>
                     <div class="group-chip-info">
                         <h4>Pridat skupinu</h4>

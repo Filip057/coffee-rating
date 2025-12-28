@@ -29,7 +29,8 @@ urlpatterns = [
     
     # Additional endpoints
     path('my/', views.my_groups, name='my-groups'),
-    
+    path('join-by-code/', views.join_by_code, name='join-by-code'),
+
     # Include router URLs
     path('', include(router.urls)),
 ]

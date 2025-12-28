@@ -25,6 +25,7 @@ const Config = {
         DETAIL: (id) => `/groups/${id}/`,
         MEMBERS: (id) => `/groups/${id}/members/`,
         JOIN: (id) => `/groups/${id}/join/`,
+        JOIN_BY_CODE: '/groups/join-by-code/',
         LEAVE: (id) => `/groups/${id}/leave/`,
         LIBRARY: (id) => `/groups/${id}/library/`,
     },
@@ -68,9 +69,28 @@ const Config = {
 
     // Routes (clean URLs)
     ROUTES: {
+        // Auth
         LOGIN: '/login',
-        DASHBOARD: '/dashboard',
         REGISTER: '/register',
+        
+        // Core
+        DASHBOARD: '/dashboard',
+        // Groups
+        GROUP_LIST: '/groups',
+        GROUP_CREATE: '/groups/create/',
+        GROUP_DETAIL: (id) => `/groups/${id}`,
+
+        // Library / Reviews
+        LIBRARY: '/library',
+        REVIEW_CREATE: '/reviews/create/',
+        REVIEW_DETAIL: (id) => `/reviews/${id}`,
+
+        // Beans
+        BEANS: '/beans',
+        BEAN_DETAIL: (id) => `/beans/${id}`,
+
+        // Purchases
+        PURCHASES: '/purchases',
     },
 
     // Token refresh threshold (refresh when less than 5 minutes remaining)

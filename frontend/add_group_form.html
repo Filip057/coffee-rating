@@ -1,0 +1,57 @@
+<div class="card animate-fade-in-up">
+    <h2 class="section-title">Vytvořit novou skupinu</h2>
+    <p class="section-subtitle">
+        Skupina slouží ke sdílení kávy, nákupů a hodnocení s ostatními členy.
+    </p>
+
+    <!-- Error -->
+    <div class="form-error" id="groupFormError" role="alert"></div>
+
+    <form id="createGroupForm" novalidate>
+        <!-- Název -->
+        <div class="form-group">
+            <label class="form-label" for="groupName">Název skupiny</label>
+            <div class="input-wrapper">
+                <input
+                    type="text"
+                    id="groupName"
+                    class="form-input"
+                    placeholder="Např. Office Coffee Club"
+                    required
+                >
+            </div>
+            <p class="field-error" id="groupNameError"></p>
+        </div>
+
+        <!-- Popis -->
+        <div class="form-group">
+            <label class="form-label" for="groupDescription">Popis (volitelné)</label>
+            <textarea
+                id="groupDescription"
+                class="form-input"
+                rows="3"
+                placeholder="Krátký popis skupiny"
+            ></textarea>
+        </div>
+
+        <!-- Soukromí -->
+        <div class="form-group">
+            <div class="checkbox-wrapper" id="privateGroup" role="checkbox" aria-checked="true" tabindex="0">
+                <div class="checkbox checked" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                </div>
+                <span class="checkbox-label">
+                    Soukromá skupina (přístup pouze přes pozvánku)
+                </span>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn btn-primary" id="createGroupBtn">
+            <span class="btn-text">Vytvořit skupinu</span>
+            <span class="spinner"></span>
+        </button>
+    </form>
+</div>

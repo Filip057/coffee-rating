@@ -10,6 +10,7 @@ def serve_frontend(request, page='login.html'):
         'login': 'login.html',
         'dashboard': 'dashboard.html',
         'register': 'register.html',
+        'groups/create': 'groups_create.html',
     }
 
     # Get the actual filename
