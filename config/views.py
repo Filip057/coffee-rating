@@ -2,7 +2,7 @@ from django.http import JsonResponse, FileResponse, Http404
 from django.conf import settings
 
 
-def serve_frontend(request, page='login.html'):
+def serve_frontend(request, page='login.html', **kwargs):
     """Serve frontend HTML pages."""
     # Map clean URLs to HTML files
     page_map = {
@@ -11,6 +11,8 @@ def serve_frontend(request, page='login.html'):
         'dashboard': 'dashboard.html',
         'register': 'register.html',
         'groups/create': 'groups_create.html',
+        'groups/list': 'groups_list.html',
+        'group_detail': 'group_detail.html',
     }
 
     # Get the actual filename

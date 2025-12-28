@@ -76,9 +76,9 @@ const Config = {
         // Core
         DASHBOARD: '/dashboard',
         // Groups
-        GROUP_LIST: '/groups',
+        GROUP_LIST: '/groups/list/',
         GROUP_CREATE: '/groups/create/',
-        GROUP_DETAIL: (id) => `/groups/${id}`,
+        GROUP_DETAIL: (id) => `/groups/${id}/`,
 
         // Library / Reviews
         LIBRARY: '/library',

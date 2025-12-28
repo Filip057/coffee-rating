@@ -258,6 +258,28 @@ const api = {
         },
 
         /**
+         * Get group library
+         * @param {string} id - Group ID
+         * @returns {Promise<Array>}
+         */
+        async getLibrary(id) {
+            return request(Config.GROUPS.LIBRARY(id));
+        },
+
+        /**
+         * Add a bean to group library
+         * @param {string} groupId - Group ID
+         * @param {string} beanId - Bean ID
+         * @returns {Promise<Object>}
+         */
+        async addToLibrary(groupId, beanId) {
+            return request(Config.GROUPS.LIBRARY(groupId), {
+                method: 'POST',
+                body: JSON.stringify({ coffeebean_id: beanId }),
+            });
+        },
+
+        /**
          * Create a new group
          * @param {Object} data - { name, description? }
          * @returns {Promise<Object>}
@@ -267,6 +289,14 @@ const api = {
                 method: 'POST',
                 body: JSON.stringify(data),
             });
+        },
+
+        /**
+         * List all groups
+         * @returns {Promise<Array>}
+         */
+        async list() {
+            return request(Config.GROUPS.LIST);
         },
     },
 
@@ -347,6 +377,18 @@ const api = {
             const endpoint = query ? `${Config.PURCHASES.LIST}?${query}` : Config.PURCHASES.LIST;
             return request(endpoint);
         },
+
+        /**
+         * Create a new purchase
+         * @param {Object} data - { coffeebean, group?, total_price_czk, weight_grams?, notes? }
+         * @returns {Promise<Object>}
+         */
+        async create(data) {
+            return request(Config.PURCHASES.LIST, {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
     },
 
     /**
@@ -407,10 +449,16 @@ const api = {
     beans: {
         /**
          * Get all beans
+         * @param {Object} options - { search?: string }
          * @returns {Promise<Array>}
          */
-        async list() {
-            const data = await request(Config.BEANS.LIST);
+        async list(options = {}) {
+            const params = new URLSearchParams();
+            if (options.search) params.append('search', options.search);
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.BEANS.LIST}?${query}` : Config.BEANS.LIST;
+            const data = await request(endpoint);
             // Handle paginated response
             return Array.isArray(data) ? data : (data.results || []);
         },

@@ -301,7 +301,7 @@
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Moje skupiny</h2>
-                <a href="#" class="section-link" id="showAllGroups">
+                <a href="/groups/list/" class="section-link" id="showAllGroups">
                     Vsechny
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18l6-6-6-6"/>
@@ -516,8 +516,9 @@
 
             // Show max 3 groups (to fill 2x2 grid)
             groups.slice(0, 3).forEach(group => {
+                const groupUrl = `/groups/${group.id}/`;
                 html += `
-                    <a href="#" class="group-card" data-group-id="${group.id}">
+                    <a href="${groupUrl}" class="group-card" data-group-id="${group.id}">
                         <div class="group-card-icon">${group.icon || '👥'}</div>
                         <div class="group-card-info">
                             <h4>${escapeHtml(group.name)}</h4>

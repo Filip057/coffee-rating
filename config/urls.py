@@ -51,6 +51,8 @@ urlpatterns = [
     path('register', serve_frontend, {'page': 'register'}, name='register'),
     path('register.html', serve_frontend, {'page': 'register'}, name='register-html'),
     path('groups/create/', serve_frontend, {'page': 'groups/create'}, name='groups-create'),
+    path('groups/list/', serve_frontend, {'page': 'groups/list'}, name='groups-list'),
+    path('groups/<uuid:group_id>/', serve_frontend, {'page': 'group_detail'}, name='group-detail'),
 ]
 
 # Media files (development only)

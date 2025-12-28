@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Moje skupiny - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/groups-list.css">
+</head>
+<body class="groups-list-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard/" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Moje skupiny</h1>
+        </header>
+
+        <!-- Stats -->
+        <div class="groups-stats" id="groupsStats">
+            <div class="stat-item">
+                <div class="stat-value" id="statTotal">-</div>
+                <div class="stat-label">Skupin</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="statMembers">-</div>
+                <div class="stat-label">Clenu celkem</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="statOwner">-</div>
+                <div class="stat-label">Vlastnim</div>
+            </div>
+        </div>
+
+        <!-- Search -->
+        <div class="search-container">
+            <div class="search-wrapper">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="Hledat skupinu...">
+            </div>
+        </div>
+
+        <!-- Groups List -->
+        <div class="groups-grid" id="groupsList">
+            <div class="skeleton group-card-skeleton"></div>
+            <div class="skeleton group-card-skeleton"></div>
+            <div class="skeleton group-card-skeleton"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // State
+        let allGroups = [];
+        const currentUserId = AuthStore.getUser()?.id;
+
+        // DOM Elements
+        const groupsList = document.getElementById('groupsList');
+        const searchInput = document.getElementById('searchInput');
+        const statTotal = document.getElementById('statTotal');
+        const statMembers = document.getElementById('statMembers');
+        const statOwner = document.getElementById('statOwner');
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Render groups
+        function renderGroups(groups) {
+            let html = '';
+
+            // Add group card always first
+            html += `
+                <a href="${Config.ROUTES.GROUP_CREATE}" class="add-group-card">
+                    <div class="add-group-icon">+</div>
+                    <div class="add-group-content">
+                        <h3>Pridat skupinu</h3>
+                        <p>Vytvorit novou nebo se pripojit</p>
+                    </div>
+                </a>
+            `;
+
+            if (groups.length === 0 && searchInput.value.trim()) {
+                // No search results
+                html += `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3 class="empty-state-title">Zadne vysledky</h3>
+                        <p class="empty-state-text">Zkuste jiny vyhledavaci dotaz</p>
+                    </div>
+                `;
+            } else if (groups.length === 0) {
+                // No groups at all
+                html += `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <h3 class="empty-state-title">Zadne skupiny</h3>
+                        <p class="empty-state-text">Vytvorte svou prvni skupinu nebo se pripojte k existujici</p>
+                    </div>
+                `;
+            } else {
+                // Render groups
+                groups.forEach(group => {
+                    const isOwner = group.owner_id === currentUserId;
+                    const isAdmin = group.role === 'admin';
+                    const roleBadge = isOwner
+                        ? '<span class="group-role owner">vlastnik</span>'
+                        : isAdmin
+                            ? '<span class="group-role admin">admin</span>'
+                            : '';
+
+                    html += `
+                        <a href="/groups/${group.id}/" class="group-card">
+                            <div class="group-card-icon">${group.icon || '👥'}</div>
+                            <div class="group-card-info">
+                                <div class="group-card-name">${escapeHtml(group.name)}${roleBadge}</div>
+                                <div class="group-card-meta">${group.member_count || 0} clenu</div>
+                            </div>
+                            <svg class="group-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </a>
+                    `;
+                });
+            }
+
+            groupsList.innerHTML = html;
+        }
+
+        // Update stats
+        function updateStats(groups) {
+            const totalGroups = groups.length;
+            const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0);
+            const ownedGroups = groups.filter(g => g.owner_id === currentUserId).length;
+
+            statTotal.textContent = totalGroups;
+            statMembers.textContent = totalMembers;
+            statOwner.textContent = ownedGroups;
+        }
+
+        // Filter groups by search
+        function filterGroups(query) {
+            if (!query.trim()) {
+                return allGroups;
+            }
+
+            const searchTerm = query.toLowerCase();
+            return allGroups.filter(group =>
+                group.name.toLowerCase().includes(searchTerm) ||
+                (group.description && group.description.toLowerCase().includes(searchTerm))
+            );
+        }
+
+        // Load groups
+        async function loadGroups() {
+            try {
+                const response = await api.groups.list();
+                allGroups = response.results || response || [];
+
+                updateStats(allGroups);
+                renderGroups(allGroups);
+            } catch (error) {
+                console.error('Failed to load groups:', error);
+
+                if (error instanceof ApiError && error.status === 401) {
+                    AuthStore.logout();
+                    window.location.href = Config.ROUTES.LOGIN;
+                    return;
+                }
+
+                groupsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3 class="empty-state-title">Chyba nacitani</h3>
+                        <p class="empty-state-text">Nepodarilo se nacist skupiny</p>
+                        <button class="btn btn-primary" onclick="location.reload()">Zkusit znovu</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Search handler with debounce
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const filtered = filterGroups(e.target.value);
+                renderGroups(filtered);
+            }, 200);
+        });
+
+        // Initialize
+        loadGroups();
+    </script>
+</body>
+</html>

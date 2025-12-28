@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Kavarna - Skupina</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <link rel="stylesheet" href="/static/css/animations.css">
+    <link rel="stylesheet" href="/static/css/group-detail.css">
+    <link rel="stylesheet" href="/static/css/group-forms.css">
+</head>
+<body class="group-detail-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title" id="pageTitle">Skupina</h1>
+        </header>
+
+        <!-- Group Info Card -->
+        <div class="card animate-fade-in-up" id="groupInfoCard">
+            <div class="group-info">
+                <div class="group-icon" id="groupIcon">👥</div>
+                <h2 class="group-name" id="groupName">
+                    <span class="skeleton" style="width: 150px; height: 24px; display: inline-block;"></span>
+                </h2>
+                <p class="group-description" id="groupDescription"></p>
+                <div class="group-stats">
+                    <div class="group-stat">
+                        <div class="group-stat-value" id="memberCount">-</div>
+                        <div class="group-stat-label">Clenu</div>
+                    </div>
+                    <div class="group-stat">
+                        <div class="group-stat-value" id="libraryCount">-</div>
+                        <div class="group-stat-label">Kav</div>
+                    </div>
+                </div>
+
+                <!-- Invite Code (owner only) -->
+                <div class="invite-section" id="inviteSection" style="display: none;">
+                    <div class="invite-label">Kod pozvanky</div>
+                    <div class="invite-code-display">
+                        <div class="invite-code" id="inviteCode">--------</div>
+                        <button class="copy-btn" id="copyBtn" title="Kopirovat">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Members Card -->
+        <div class="card animate-fade-in-up">
+            <div class="card-header">
+                <h3 class="card-title">Clenove</h3>
+                <span class="card-badge" id="membersBadge">-</span>
+            </div>
+            <div id="membersList">
+                <div class="member-item">
+                    <div class="skeleton" style="width: 40px; height: 40px; border-radius: 8px;"></div>
+                    <div class="member-info">
+                        <div class="skeleton" style="width: 120px; height: 16px; margin-bottom: 4px;"></div>
+                        <div class="skeleton" style="width: 160px; height: 12px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Card -->
+        <div class="card animate-fade-in-up">
+            <div class="card-header">
+                <h3 class="card-title">Knihovna skupiny</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="card-badge" id="libraryBadge">-</span>
+                    <button class="add-btn" id="addLibraryBtn" title="Pridat kavu">+</button>
+                </div>
+            </div>
+            <div id="libraryList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">☕</div>
+                    <p>Zatim zadne kavy</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchases Card -->
+        <div class="card animate-fade-in-up">
+            <div class="card-header">
+                <h3 class="card-title">Nakupy</h3>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="card-badge" id="purchasesBadge">-</span>
+                    <button class="add-btn" id="addPurchaseBtn" title="Pridat nakup">+</button>
+                </div>
+            </div>
+            <div id="purchasesList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🛒</div>
+                    <p>Zatim zadne nakupy</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions" id="actionsSection">
+            <button class="btn btn-danger" id="leaveBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Opustit skupinu
+            </button>
+        </div>
+    </div>
+
+    <!-- Leave Confirmation Modal -->
+    <div class="modal-overlay" id="leaveModal">
+        <div class="modal">
+            <h3 class="modal-title">Opustit skupinu?</h3>
+            <p class="modal-text" id="leaveModalText">Opravdu chcete opustit tuto skupinu?</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="cancelLeaveBtn">Zrusit</button>
+                <button class="btn btn-danger" id="confirmLeaveBtn">Opustit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Bean to Library Modal -->
+    <div class="modal-overlay" id="addBeanModal">
+        <div class="modal" style="max-width: 400px; text-align: left;">
+            <h3 class="modal-title" style="text-align: center; margin-bottom: 16px;">Pridat kavu do knihovny</h3>
+            <form id="addBeanForm">
+                <div class="form-group">
+                    <label class="form-label">Vyhledat kavu</label>
+                    <div class="search-wrapper">
+                        <input type="text" class="form-input" id="beanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
+                        <div class="search-results" id="beanSearchResults"></div>
+                    </div>
+                    <input type="hidden" id="selectedBeanId">
+                    <div class="selected-item" id="selectedBeanDisplay" style="display: none;">
+                        <div class="selected-item-icon">☕</div>
+                        <div class="selected-item-info">
+                            <div class="selected-item-name" id="selectedBeanName"></div>
+                            <div class="selected-item-meta" id="selectedBeanMeta"></div>
+                        </div>
+                        <button type="button" class="selected-item-remove" id="removeBeanBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-error" id="addBeanError"></div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="cancelAddBeanBtn">Zrusit</button>
+                    <button type="submit" class="btn btn-primary" id="submitAddBeanBtn" disabled>
+                        <span class="btn-text">Pridat</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Purchase Modal -->
+    <div class="modal-overlay" id="addPurchaseModal">
+        <div class="modal" style="max-width: 400px; text-align: left;">
+            <h3 class="modal-title" style="text-align: center; margin-bottom: 16px;">Novy nakup</h3>
+            <form id="addPurchaseForm">
+                <div class="form-group">
+                    <label class="form-label">Kava</label>
+                    <div class="search-wrapper">
+                        <input type="text" class="form-input" id="purchaseBeanSearchInput" placeholder="Vyhledat kavu..." autocomplete="off">
+                        <div class="search-results" id="purchaseBeanSearchResults"></div>
+                    </div>
+                    <input type="hidden" id="purchaseSelectedBeanId">
+                    <div class="selected-item" id="purchaseSelectedBeanDisplay" style="display: none;">
+                        <div class="selected-item-icon">☕</div>
+                        <div class="selected-item-info">
+                            <div class="selected-item-name" id="purchaseSelectedBeanName"></div>
+                            <div class="selected-item-meta" id="purchaseSelectedBeanMeta"></div>
+                        </div>
+                        <button type="button" class="selected-item-remove" id="purchaseRemoveBeanBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Cena (CZK)</label>
+                        <input type="number" class="form-input" id="purchasePrice" placeholder="0" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mnozstvi (g)</label>
+                        <input type="number" class="form-input" id="purchaseWeight" placeholder="250" min="1" value="250">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Poznamka <span class="optional">(volitelne)</span></label>
+                    <input type="text" class="form-input" id="purchaseNote" placeholder="Napr. nakoupeno v akci...">
+                </div>
+                <div class="form-error" id="addPurchaseError"></div>
+                <div class="modal-actions" style="margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="cancelAddPurchaseBtn">Zrusit</button>
+                    <button type="submit" class="btn btn-primary" id="submitAddPurchaseBtn">
+                        <span class="btn-text">Vytvorit nakup</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // Get group ID from URL
+        const pathParts = window.location.pathname.split('/');
+        const groupId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+
+        if (!groupId) {
+            window.location.href = Config.ROUTES.DASHBOARD;
+        }
+
+        // DOM elements
+        const pageTitle = document.getElementById('pageTitle');
+        const groupIcon = document.getElementById('groupIcon');
+        const groupName = document.getElementById('groupName');
+        const groupDescription = document.getElementById('groupDescription');
+        const memberCount = document.getElementById('memberCount');
+        const libraryCount = document.getElementById('libraryCount');
+        const inviteSection = document.getElementById('inviteSection');
+        const inviteCode = document.getElementById('inviteCode');
+        const copyBtn = document.getElementById('copyBtn');
+        const membersBadge = document.getElementById('membersBadge');
+        const membersList = document.getElementById('membersList');
+        const libraryBadge = document.getElementById('libraryBadge');
+        const libraryList = document.getElementById('libraryList');
+        const addLibraryBtn = document.getElementById('addLibraryBtn');
+        const purchasesBadge = document.getElementById('purchasesBadge');
+        const purchasesList = document.getElementById('purchasesList');
+        const addPurchaseBtn = document.getElementById('addPurchaseBtn');
+        const actionsSection = document.getElementById('actionsSection');
+        const leaveBtn = document.getElementById('leaveBtn');
+        const leaveModal = document.getElementById('leaveModal');
+        const leaveModalText = document.getElementById('leaveModalText');
+        const cancelLeaveBtn = document.getElementById('cancelLeaveBtn');
+        const confirmLeaveBtn = document.getElementById('confirmLeaveBtn');
+
+        let currentGroup = null;
+        let currentUserRole = null;
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Get initials from name
+        function getInitials(name) {
+            if (!name) return '?';
+            const parts = name.split(' ');
+            if (parts.length >= 2) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name.substring(0, 2).toUpperCase();
+        }
+
+        // Get role label
+        function getRoleLabel(role) {
+            switch (role) {
+                case 'owner': return 'Vlastnik';
+                case 'admin': return 'Admin';
+                default: return 'Clen';
+            }
+        }
+
+        // Load group data
+        async function loadGroup() {
+            try {
+                const group = await api.groups.getGroup(groupId);
+                currentGroup = group;
+                currentUserRole = group.user_role;
+
+                // Update header
+                pageTitle.textContent = group.name;
+                document.title = `Kavarna - ${group.name}`;
+
+                // Update group info
+                groupName.textContent = group.name;
+                groupDescription.textContent = group.description || 'Bez popisu';
+                memberCount.textContent = group.member_count;
+
+                // Show invite code only for owner
+                if (group.user_role === 'owner' && group.invite_code) {
+                    inviteSection.style.display = 'block';
+                    inviteCode.textContent = group.invite_code;
+                }
+
+                // Hide leave button for owner
+                if (group.user_role === 'owner') {
+                    actionsSection.style.display = 'none';
+                }
+
+            } catch (error) {
+                console.error('Failed to load group:', error);
+                if (error instanceof ApiError && error.status === 404) {
+                    window.location.href = Config.ROUTES.DASHBOARD;
+                }
+            }
+        }
+
+        // Load members
+        async function loadMembers() {
+            try {
+                const members = await api.groups.getMembers(groupId);
+                membersBadge.textContent = members.length;
+
+                if (members.length === 0) {
+                    membersList.innerHTML = `
+                        <div class="empty-state">
+                            <p>Zadni clenove</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                members.forEach(membership => {
+                    const user = membership.user;
+                    const initials = getInitials(user.display_name);
+                    html += `
+                        <div class="member-item">
+                            <div class="member-avatar">${initials}</div>
+                            <div class="member-info">
+                                <div class="member-name">${escapeHtml(user.display_name)}</div>
+                                <div class="member-email">${escapeHtml(user.email)}</div>
+                            </div>
+                            <span class="member-role ${membership.role}">${getRoleLabel(membership.role)}</span>
+                        </div>
+                    `;
+                });
+
+                membersList.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load members:', error);
+                membersList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Chyba pri nacitani clenu</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load library
+        async function loadLibrary() {
+            try {
+                const library = await api.groups.getLibrary(groupId);
+                libraryBadge.textContent = library.length;
+                libraryCount.textContent = library.length;
+
+                if (library.length === 0) {
+                    libraryList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">☕</div>
+                            <p>Zatim zadne kavy</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                library.forEach(entry => {
+                    const bean = entry.coffeebean;
+                    html += `
+                        <div class="library-item">
+                            <div class="bean-icon">☕</div>
+                            <div class="bean-info">
+                                <div class="bean-name">${escapeHtml(bean.name)}</div>
+                                <div class="bean-roastery">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                            ${bean.avg_rating ? `
+                                <div class="bean-rating">
+                                    <span>★</span>
+                                    <span>${bean.avg_rating.toFixed(1)}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                libraryList.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load library:', error);
+                libraryList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Chyba pri nacitani knihovny</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load purchases
+        async function loadPurchases() {
+            try {
+                const response = await api.purchases.list({ group: groupId });
+                const purchases = response.results || response;
+                purchasesBadge.textContent = purchases.length;
+
+                if (purchases.length === 0) {
+                    purchasesList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🛒</div>
+                            <p>Zatim zadne nakupy</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = '';
+                purchases.forEach(purchase => {
+                    const beanName = purchase.coffeebean?.name || purchase.coffeebean_name || 'Neznama kava';
+                    const buyerName = purchase.bought_by?.display_name || 'Neznamy';
+                    const amount = purchase.total_price_czk || purchase.total_price || 0;
+                    const isPaid = purchase.is_fully_paid;
+                    const date = new Date(purchase.created_at).toLocaleDateString('cs-CZ', {
+                        day: 'numeric',
+                        month: 'short'
+                    });
+
+                    html += `
+                        <div class="purchase-item">
+                            <div class="purchase-icon">🛒</div>
+                            <div class="purchase-info">
+                                <div class="purchase-name">${escapeHtml(beanName)}</div>
+                                <div class="purchase-meta">${escapeHtml(buyerName)} • ${date}</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="purchase-amount">${formatCZK(amount)}</div>
+                                <span class="purchase-status ${isPaid ? 'paid' : 'unpaid'}">
+                                    ${isPaid ? 'Zaplaceno' : 'Nezaplaceno'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                purchasesList.innerHTML = html;
+
+            } catch (error) {
+                console.error('Failed to load purchases:', error);
+                purchasesList.innerHTML = `
+                    <div class="empty-state">
+                        <p>Chyba pri nacitani nakupu</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Format CZK
+        function formatCZK(amount) {
+            return new Intl.NumberFormat('cs-CZ', {
+                style: 'currency',
+                currency: 'CZK',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Copy invite code
+        copyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(inviteCode.textContent);
+                copyBtn.classList.add('copied');
+                copyBtn.innerHTML = `
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 6L9 17l-5-5"/>
+                    </svg>
+                `;
+                setTimeout(() => {
+                    copyBtn.classList.remove('copied');
+                    copyBtn.innerHTML = `
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                    `;
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+            }
+        });
+
+        // Leave group modal
+        leaveBtn.addEventListener('click', () => {
+            if (currentGroup) {
+                leaveModalText.textContent = `Opravdu chcete opustit skupinu "${currentGroup.name}"?`;
+            }
+            leaveModal.classList.add('visible');
+        });
+
+        cancelLeaveBtn.addEventListener('click', () => {
+            leaveModal.classList.remove('visible');
+        });
+
+        leaveModal.addEventListener('click', (e) => {
+            if (e.target === leaveModal) {
+                leaveModal.classList.remove('visible');
+            }
+        });
+
+        confirmLeaveBtn.addEventListener('click', async () => {
+            try {
+                await api.groups.leave(groupId);
+                window.location.href = Config.ROUTES.DASHBOARD;
+            } catch (error) {
+                console.error('Failed to leave group:', error);
+                if (error instanceof ApiError) {
+                    alert(error.data?.error || 'Nepodarilo se opustit skupinu');
+                }
+                leaveModal.classList.remove('visible');
+            }
+        });
+
+        // === ADD BEAN TO LIBRARY MODAL ===
+        const addBeanModal = document.getElementById('addBeanModal');
+        const addBeanForm = document.getElementById('addBeanForm');
+        const beanSearchInput = document.getElementById('beanSearchInput');
+        const beanSearchResults = document.getElementById('beanSearchResults');
+        const selectedBeanId = document.getElementById('selectedBeanId');
+        const selectedBeanDisplay = document.getElementById('selectedBeanDisplay');
+        const selectedBeanName = document.getElementById('selectedBeanName');
+        const selectedBeanMeta = document.getElementById('selectedBeanMeta');
+        const removeBeanBtn = document.getElementById('removeBeanBtn');
+        const cancelAddBeanBtn = document.getElementById('cancelAddBeanBtn');
+        const submitAddBeanBtn = document.getElementById('submitAddBeanBtn');
+        const addBeanError = document.getElementById('addBeanError');
+
+        let beanSearchTimeout;
+
+        // Open add bean modal
+        addLibraryBtn.addEventListener('click', () => {
+            addBeanModal.classList.add('visible');
+            beanSearchInput.value = '';
+            selectedBeanId.value = '';
+            selectedBeanDisplay.style.display = 'none';
+            beanSearchInput.style.display = 'block';
+            beanSearchResults.classList.remove('visible');
+            addBeanError.classList.remove('visible');
+            submitAddBeanBtn.disabled = true;
+            beanSearchInput.focus();
+        });
+
+        // Close add bean modal
+        function closeAddBeanModal() {
+            addBeanModal.classList.remove('visible');
+        }
+
+        cancelAddBeanBtn.addEventListener('click', closeAddBeanModal);
+        addBeanModal.addEventListener('click', (e) => {
+            if (e.target === addBeanModal) closeAddBeanModal();
+        });
+
+        // Search beans
+        beanSearchInput.addEventListener('input', (e) => {
+            clearTimeout(beanSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                beanSearchResults.classList.remove('visible');
+                return;
+            }
+
+            beanSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await api.beans.list({ search: query });
+                    const beans = response.results || response;
+
+                    if (beans.length === 0) {
+                        beanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky</div>';
+                    } else {
+                        beanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
+                            <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
+                                <div class="search-result-name">${escapeHtml(bean.name)}</div>
+                                <div class="search-result-meta">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                        `).join('');
+                    }
+                    beanSearchResults.classList.add('visible');
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Select bean from search results
+        beanSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                selectedBeanId.value = item.dataset.id;
+                selectedBeanName.textContent = item.dataset.name;
+                selectedBeanMeta.textContent = item.dataset.roastery || 'Neznama prazirna';
+                selectedBeanDisplay.style.display = 'flex';
+                beanSearchInput.style.display = 'none';
+                beanSearchResults.classList.remove('visible');
+                submitAddBeanBtn.disabled = false;
+            }
+        });
+
+        // Remove selected bean
+        removeBeanBtn.addEventListener('click', () => {
+            selectedBeanId.value = '';
+            selectedBeanDisplay.style.display = 'none';
+            beanSearchInput.style.display = 'block';
+            beanSearchInput.value = '';
+            submitAddBeanBtn.disabled = true;
+            beanSearchInput.focus();
+        });
+
+        // Submit add bean form
+        addBeanForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const beanId = selectedBeanId.value;
+            if (!beanId) return;
+
+            submitAddBeanBtn.disabled = true;
+            submitAddBeanBtn.classList.add('btn-loading');
+            addBeanError.classList.remove('visible');
+
+            try {
+                await api.groups.addToLibrary(groupId, beanId);
+                closeAddBeanModal();
+                loadLibrary(); // Refresh the library list
+            } catch (error) {
+                console.error('Failed to add bean:', error);
+                addBeanError.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se pridat kavu';
+                addBeanError.classList.add('visible');
+                submitAddBeanBtn.disabled = false;
+            } finally {
+                submitAddBeanBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // === ADD PURCHASE MODAL ===
+        const addPurchaseModal = document.getElementById('addPurchaseModal');
+        const addPurchaseForm = document.getElementById('addPurchaseForm');
+        const purchaseBeanSearchInput = document.getElementById('purchaseBeanSearchInput');
+        const purchaseBeanSearchResults = document.getElementById('purchaseBeanSearchResults');
+        const purchaseSelectedBeanId = document.getElementById('purchaseSelectedBeanId');
+        const purchaseSelectedBeanDisplay = document.getElementById('purchaseSelectedBeanDisplay');
+        const purchaseSelectedBeanName = document.getElementById('purchaseSelectedBeanName');
+        const purchaseSelectedBeanMeta = document.getElementById('purchaseSelectedBeanMeta');
+        const purchaseRemoveBeanBtn = document.getElementById('purchaseRemoveBeanBtn');
+        const purchasePrice = document.getElementById('purchasePrice');
+        const purchaseWeight = document.getElementById('purchaseWeight');
+        const purchaseNote = document.getElementById('purchaseNote');
+        const cancelAddPurchaseBtn = document.getElementById('cancelAddPurchaseBtn');
+        const submitAddPurchaseBtn = document.getElementById('submitAddPurchaseBtn');
+        const addPurchaseError = document.getElementById('addPurchaseError');
+
+        let purchaseBeanSearchTimeout;
+
+        // Open add purchase modal
+        addPurchaseBtn.addEventListener('click', () => {
+            addPurchaseModal.classList.add('visible');
+            purchaseBeanSearchInput.value = '';
+            purchaseSelectedBeanId.value = '';
+            purchaseSelectedBeanDisplay.style.display = 'none';
+            purchaseBeanSearchInput.style.display = 'block';
+            purchaseBeanSearchResults.classList.remove('visible');
+            purchasePrice.value = '';
+            purchaseWeight.value = '250';
+            purchaseNote.value = '';
+            addPurchaseError.classList.remove('visible');
+            purchaseBeanSearchInput.focus();
+        });
+
+        // Close add purchase modal
+        function closeAddPurchaseModal() {
+            addPurchaseModal.classList.remove('visible');
+        }
+
+        cancelAddPurchaseBtn.addEventListener('click', closeAddPurchaseModal);
+        addPurchaseModal.addEventListener('click', (e) => {
+            if (e.target === addPurchaseModal) closeAddPurchaseModal();
+        });
+
+        // Search beans for purchase
+        purchaseBeanSearchInput.addEventListener('input', (e) => {
+            clearTimeout(purchaseBeanSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                purchaseBeanSearchResults.classList.remove('visible');
+                return;
+            }
+
+            purchaseBeanSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await api.beans.list({ search: query });
+                    const beans = response.results || response;
+
+                    if (beans.length === 0) {
+                        purchaseBeanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky</div>';
+                    } else {
+                        purchaseBeanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
+                            <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
+                                <div class="search-result-name">${escapeHtml(bean.name)}</div>
+                                <div class="search-result-meta">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                        `).join('');
+                    }
+                    purchaseBeanSearchResults.classList.add('visible');
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Select bean from purchase search results
+        purchaseBeanSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                purchaseSelectedBeanId.value = item.dataset.id;
+                purchaseSelectedBeanName.textContent = item.dataset.name;
+                purchaseSelectedBeanMeta.textContent = item.dataset.roastery || 'Neznama prazirna';
+                purchaseSelectedBeanDisplay.style.display = 'flex';
+                purchaseBeanSearchInput.style.display = 'none';
+                purchaseBeanSearchResults.classList.remove('visible');
+            }
+        });
+
+        // Remove selected bean from purchase
+        purchaseRemoveBeanBtn.addEventListener('click', () => {
+            purchaseSelectedBeanId.value = '';
+            purchaseSelectedBeanDisplay.style.display = 'none';
+            purchaseBeanSearchInput.style.display = 'block';
+            purchaseBeanSearchInput.value = '';
+            purchaseBeanSearchInput.focus();
+        });
+
+        // Submit add purchase form
+        addPurchaseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const beanId = purchaseSelectedBeanId.value;
+            const price = parseInt(purchasePrice.value, 10);
+            const weight = parseInt(purchaseWeight.value, 10) || 250;
+
+            if (!beanId) {
+                addPurchaseError.textContent = 'Vyberte kavu';
+                addPurchaseError.classList.add('visible');
+                return;
+            }
+
+            if (!price || price <= 0) {
+                addPurchaseError.textContent = 'Zadejte platnou cenu';
+                addPurchaseError.classList.add('visible');
+                return;
+            }
+
+            submitAddPurchaseBtn.disabled = true;
+            submitAddPurchaseBtn.classList.add('btn-loading');
+            addPurchaseError.classList.remove('visible');
+
+            try {
+                await api.purchases.create({
+                    coffeebean: beanId,
+                    group: groupId,
+                    total_price_czk: price,
+                    weight_grams: weight,
+                    notes: purchaseNote.value.trim() || undefined
+                });
+                closeAddPurchaseModal();
+                loadPurchases(); // Refresh the purchases list
+            } catch (error) {
+                console.error('Failed to create purchase:', error);
+                addPurchaseError.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se vytvorit nakup';
+                addPurchaseError.classList.add('visible');
+            } finally {
+                submitAddPurchaseBtn.disabled = false;
+                submitAddPurchaseBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // Close modals on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeAddBeanModal();
+                closeAddPurchaseModal();
+            }
+        });
+
+        // Initialize
+        loadGroup();
+        loadMembers();
+        loadLibrary();
+        loadPurchases();
+    </script>
+</body>
+</html>
