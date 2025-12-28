@@ -30,10 +30,7 @@
     box-shadow: var(--shadow-crema);
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-crema-hover);
-}
+
 
 .btn-primary:active {
     transform: translateY(0);
@@ -45,10 +42,7 @@
     color: var(--espresso);
 }
 
-.btn-secondary:hover {
-    border-color: var(--crema);
-    background: var(--milk-foam);
-}
+
 
 .btn-small {
     padding: 6px 12px;

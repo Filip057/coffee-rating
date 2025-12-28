@@ -109,6 +109,87 @@
             padding: 24px 16px;
             color: var(--steam);
         }
+
+        /* Groups Grid */
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .group-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 16px;
+            background: var(--porcelain);
+            border: 1px solid var(--latte);
+            border-radius: var(--radius-xl);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .group-card:hover {
+            border-color: var(--crema-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .group-card-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--espresso), var(--espresso-light));
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .group-card-info h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .group-card-info p {
+            font-size: 0.75rem;
+            color: var(--steam);
+        }
+
+        /* Add group card */
+        .group-card-add {
+            border-style: dashed;
+            border-color: var(--caramel);
+            background: linear-gradient(135deg, rgba(164, 116, 73, 0.05), rgba(164, 116, 73, 0.02));
+        }
+
+        .group-card-add:hover {
+            border-color: var(--caramel);
+            background: linear-gradient(135deg, rgba(164, 116, 73, 0.1), rgba(164, 116, 73, 0.05));
+        }
+
+        .group-card-add .group-card-icon {
+            background: var(--caramel);
+            color: var(--porcelain);
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        .group-card-add .group-card-info h4 {
+            color: var(--caramel);
+        }
+
+        .group-card-skeleton {
+            height: 100px;
+            border-radius: var(--radius-xl);
+        }
     </style>
 </head>
 <body class="dashboard">
@@ -220,16 +301,18 @@
         <section class="section">
             <div class="section-header">
                 <h2 class="section-title">Moje skupiny</h2>
-                <a href="#" class="section-link">
+                <a href="#" class="section-link" id="showAllGroups">
                     Vsechny
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18l6-6-6-6"/>
                     </svg>
                 </a>
             </div>
-            <div class="groups-scroll" id="groupsList">
-                <div class="skeleton" style="width: 140px; height: 60px; flex-shrink: 0;"></div>
-                <div class="skeleton" style="width: 140px; height: 60px; flex-shrink: 0;"></div>
+            <div class="groups-grid" id="groupsList">
+                <div class="skeleton group-card-skeleton"></div>
+                <div class="skeleton group-card-skeleton"></div>
+                <div class="skeleton group-card-skeleton"></div>
+                <div class="skeleton group-card-skeleton"></div>
             </div>
         </section>
 
@@ -415,32 +498,34 @@
             renderPayments(data.payments);
         }
 
-        // Render groups chips
+        // Render groups grid (2x2: add button + max 3 groups)
         function renderGroups(groups) {
             const groupsList = document.getElementById('groupsList');
             let html = '';
 
-            groups.slice(0, 5).forEach(group => {
+            // Add button always first
+            html += `
+                <a href="${Config.ROUTES.GROUP_CREATE}" class="group-card group-card-add">
+                    <div class="group-card-icon">+</div>
+                    <div class="group-card-info">
+                        <h4>Pridat skupinu</h4>
+                        <p>Vytvorit nebo pripojit</p>
+                    </div>
+                </a>
+            `;
+
+            // Show max 3 groups (to fill 2x2 grid)
+            groups.slice(0, 3).forEach(group => {
                 html += `
-                    <a href="#" class="group-chip" data-group-id="${group.id}">
-                        <div class="group-chip-icon">${group.icon || '👥'}</div>
-                        <div class="group-chip-info">
+                    <a href="#" class="group-card" data-group-id="${group.id}">
+                        <div class="group-card-icon">${group.icon || '👥'}</div>
+                        <div class="group-card-info">
                             <h4>${escapeHtml(group.name)}</h4>
                             <p>${group.member_count || 0} clenu</p>
                         </div>
                     </a>
                 `;
             });
-
-            html += `
-                <a href="${Config.ROUTES.GROUP_CREATE}" class="group-chip group-chip-add">
-                    <div class="group-chip-icon">+</div>
-                    <div class="group-chip-info">
-                        <h4>Pridat skupinu</h4>
-                        <p>Vytvorit nebo pripojit</p>
-                    </div>
-                </a>
-            `;
 
             groupsList.innerHTML = html;
         }
