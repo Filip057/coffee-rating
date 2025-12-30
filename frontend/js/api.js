@@ -350,6 +350,50 @@ const api = {
             // Paginated response includes count
             return data.count ?? (Array.isArray(data) ? data.length : 0);
         },
+
+        /**
+         * Get reviews for a specific bean
+         * @param {string} beanId - Bean ID
+         * @returns {Promise<Array>}
+         */
+        async getByBean(beanId) {
+            const data = await request(`${Config.REVIEWS.LIST}?coffeebean=${beanId}`);
+            return Array.isArray(data) ? data : (data.results || []);
+        },
+
+        /**
+         * Get bean review summary
+         * @param {string} beanId - Bean ID
+         * @returns {Promise<Object>}
+         */
+        async getBeanSummary(beanId) {
+            return request(Config.REVIEWS.BEAN_SUMMARY(beanId));
+        },
+
+        /**
+         * Create a review
+         * @param {Object} data - { coffeebean, rating, comment?, taste_profile? }
+         * @returns {Promise<Object>}
+         */
+        async create(data) {
+            return request(Config.REVIEWS.LIST, {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
+
+        /**
+         * Update a review
+         * @param {string} id - Review ID
+         * @param {Object} data - Fields to update
+         * @returns {Promise<Object>}
+         */
+        async update(id, data) {
+            return request(`${Config.REVIEWS.LIST}${id}/`, {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+            });
+        },
     },
 
     /**
@@ -448,19 +492,22 @@ const api = {
      */
     beans: {
         /**
-         * Get all beans
-         * @param {Object} options - { search?: string }
-         * @returns {Promise<Array>}
+         * Get all beans with filters
+         * @param {Object} options - { search?, roastery?, origin?, roast_profile?, processing?, page? }
+         * @returns {Promise<{results: Array, count: number}>}
          */
         async list(options = {}) {
             const params = new URLSearchParams();
             if (options.search) params.append('search', options.search);
+            if (options.roastery) params.append('roastery', options.roastery);
+            if (options.origin) params.append('origin', options.origin);
+            if (options.roast_profile) params.append('roast_profile', options.roast_profile);
+            if (options.processing) params.append('processing', options.processing);
+            if (options.page) params.append('page', options.page.toString());
 
             const query = params.toString();
             const endpoint = query ? `${Config.BEANS.LIST}?${query}` : Config.BEANS.LIST;
-            const data = await request(endpoint);
-            // Handle paginated response
-            return Array.isArray(data) ? data : (data.results || []);
+            return request(endpoint);
         },
 
         /**
@@ -480,6 +527,34 @@ const api = {
          */
         async get(id) {
             return request(Config.BEANS.DETAIL(id));
+        },
+
+        /**
+         * Create a new bean
+         * @param {Object} data - { name, roastery_name, origin_country?, roast_profile?, processing? }
+         * @returns {Promise<Object>}
+         */
+        async create(data) {
+            return request(Config.BEANS.LIST, {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
+
+        /**
+         * Get all roasteries
+         * @returns {Promise<Array<string>>}
+         */
+        async getRoasteries() {
+            return request(Config.BEANS.ROASTERIES);
+        },
+
+        /**
+         * Get all origin countries
+         * @returns {Promise<Array<string>>}
+         */
+        async getOrigins() {
+            return request(Config.BEANS.ORIGINS);
         },
     },
 };

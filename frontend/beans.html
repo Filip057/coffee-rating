@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Prozkoumat kavy - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/beans.css">
+</head>
+<body class="beans-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Prozkoumat kavy</h1>
+        </header>
+
+        <!-- Search and Filter -->
+        <div class="search-filter-bar">
+            <div class="search-container">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="Hledat kavy...">
+            </div>
+            <button class="filter-btn" id="filterBtn" title="Filtry">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Filter Panel -->
+        <div class="filter-panel" id="filterPanel">
+            <div class="filter-group">
+                <label class="filter-label">Prazirna</label>
+                <select class="filter-select" id="roasteryFilter">
+                    <option value="">Vsechny prazirny</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Zeme puvodu</label>
+                <select class="filter-select" id="originFilter">
+                    <option value="">Vsechny zeme</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Profil prazeni</label>
+                <div class="filter-chips" id="roastChips">
+                    <button class="filter-chip active" data-value="">Vsechny</button>
+                    <button class="filter-chip" data-value="light">Svetly</button>
+                    <button class="filter-chip" data-value="medium_light">Stredne svetly</button>
+                    <button class="filter-chip" data-value="medium">Stredni</button>
+                    <button class="filter-chip" data-value="medium_dark">Stredne tmavy</button>
+                    <button class="filter-chip" data-value="dark">Tmavy</button>
+                </div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Zpracovani</label>
+                <div class="filter-chips" id="processingChips">
+                    <button class="filter-chip active" data-value="">Vsechny</button>
+                    <button class="filter-chip" data-value="washed">Prane</button>
+                    <button class="filter-chip" data-value="natural">Natural</button>
+                    <button class="filter-chip" data-value="honey">Honey</button>
+                    <button class="filter-chip" data-value="anaerobic">Anaerobni</button>
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="clear-filters-btn" id="clearFiltersBtn">Zrusit filtry</button>
+            </div>
+        </div>
+
+        <!-- Results Info -->
+        <div class="results-info" id="resultsInfo">Nacitam...</div>
+
+        <!-- Beans List -->
+        <div class="beans-list" id="beansList">
+            <div class="skeleton bean-card-skeleton"></div>
+            <div class="skeleton bean-card-skeleton"></div>
+            <div class="skeleton bean-card-skeleton"></div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="pagination" style="display: none;">
+            <button class="pagination-btn" id="prevBtn" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 18l-6-6 6-6"/>
+                </svg>
+                Predchozi
+            </button>
+            <span class="pagination-info" id="pageInfo">1 / 1</span>
+            <button class="pagination-btn" id="nextBtn" disabled>
+                Dalsi
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // State
+        let currentPage = 1;
+        let totalPages = 1;
+        let searchQuery = '';
+        let filters = {
+            roastery: '',
+            origin: '',
+            roast_profile: '',
+            processing: ''
+        };
+        let userLibraryIds = new Set();
+
+        // DOM Elements
+        const beansList = document.getElementById('beansList');
+        const searchInput = document.getElementById('searchInput');
+        const filterBtn = document.getElementById('filterBtn');
+        const filterPanel = document.getElementById('filterPanel');
+        const roasteryFilter = document.getElementById('roasteryFilter');
+        const originFilter = document.getElementById('originFilter');
+        const roastChips = document.getElementById('roastChips');
+        const processingChips = document.getElementById('processingChips');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const resultsInfo = document.getElementById('resultsInfo');
+        const pagination = document.getElementById('pagination');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const pageInfo = document.getElementById('pageInfo');
+        const toast = document.getElementById('toast');
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Format roast profile
+        function formatRoast(roast) {
+            const roastMap = {
+                'light': 'Svetly',
+                'medium_light': 'Stredne svetly',
+                'medium': 'Stredni',
+                'medium_dark': 'Stredne tmavy',
+                'dark': 'Tmavy'
+            };
+            return roastMap[roast] || roast;
+        }
+
+        // Format processing method
+        function formatProcessing(processing) {
+            const processingMap = {
+                'washed': 'Prane',
+                'natural': 'Natural',
+                'honey': 'Honey',
+                'anaerobic': 'Anaerobni',
+                'other': 'Jine'
+            };
+            return processingMap[processing] || processing;
+        }
+
+        // Load user library to check which beans are already added
+        async function loadUserLibrary() {
+            if (!AuthStore.isAuthenticated()) return;
+
+            try {
+                const response = await api.reviews.getLibrary();
+                const items = response.results || response || [];
+                userLibraryIds = new Set(items.map(item => item.coffeebean?.id));
+            } catch (error) {
+                console.error('Failed to load user library:', error);
+            }
+        }
+
+        // Load filter options
+        async function loadFilterOptions() {
+            try {
+                const [roasteries, origins] = await Promise.all([
+                    api.beans.getRoasteries(),
+                    api.beans.getOrigins()
+                ]);
+
+                // Populate roastery filter
+                roasteries.forEach(roastery => {
+                    const option = document.createElement('option');
+                    option.value = roastery;
+                    option.textContent = roastery;
+                    roasteryFilter.appendChild(option);
+                });
+
+                // Populate origin filter
+                origins.forEach(origin => {
+                    const option = document.createElement('option');
+                    option.value = origin;
+                    option.textContent = origin;
+                    originFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load filter options:', error);
+            }
+        }
+
+        // Render beans list
+        function renderBeans(beans, totalCount) {
+            if (beans.length === 0) {
+                beansList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🔍</div>
+                        <h3 class="empty-state-title">Zadne kavy nenalezeny</h3>
+                        <p class="empty-state-text">Zkuste zmenit vyhledavani nebo filtry</p>
+                    </div>
+                `;
+                pagination.style.display = 'none';
+                resultsInfo.textContent = 'Zadne vysledky';
+                return;
+            }
+
+            resultsInfo.textContent = `Nalezeno ${totalCount} kav`;
+
+            let html = '';
+            beans.forEach(bean => {
+                const inLibrary = userLibraryIds.has(bean.id);
+                const beanUrl = `/beans/${bean.id}/`;
+
+                html += `
+                    <div class="bean-card" data-id="${bean.id}">
+                        <a href="${beanUrl}" class="bean-card-link" style="display: contents; color: inherit; text-decoration: none;">
+                            <div class="bean-card-icon">☕</div>
+                            <div class="bean-card-info">
+                                <div class="bean-card-name">${escapeHtml(bean.name)}</div>
+                                <div class="bean-card-meta">
+                                    ${escapeHtml(bean.roastery_name || 'Neznama prazirna')}
+                                    ${bean.origin_country ? ' • ' + escapeHtml(bean.origin_country) : ''}
+                                </div>
+                                <div class="bean-tags">
+                                    ${bean.roast_profile ? `<span class="bean-tag">${escapeHtml(formatRoast(bean.roast_profile))}</span>` : ''}
+                                    ${bean.processing ? `<span class="bean-tag">${escapeHtml(formatProcessing(bean.processing))}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="bean-card-right">
+                                ${bean.average_rating ? `
+                                    <div class="bean-card-rating">
+                                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        ${parseFloat(bean.average_rating).toFixed(1)}
+                                    </div>
+                                    <div class="bean-card-reviews">${bean.review_count || 0} hodnoceni</div>
+                                ` : `
+                                    <span class="no-rating-badge">Bez hodnoceni</span>
+                                `}
+                            </div>
+                        </a>
+                        ${AuthStore.isAuthenticated() ? `
+                            <button class="add-to-library-btn ${inLibrary ? 'added' : ''}"
+                                    data-bean-id="${bean.id}"
+                                    title="${inLibrary ? 'V knihovne' : 'Pridat do knihovny'}"
+                                    ${inLibrary ? 'disabled' : ''}>
+                                ${inLibrary ? `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                ` : `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14"/>
+                                    </svg>
+                                `}
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            beansList.innerHTML = html;
+
+            // Update pagination
+            if (totalPages > 1) {
+                pagination.style.display = 'flex';
+                pageInfo.textContent = `${currentPage} / ${totalPages}`;
+                prevBtn.disabled = currentPage <= 1;
+                nextBtn.disabled = currentPage >= totalPages;
+            } else {
+                pagination.style.display = 'none';
+            }
+
+            // Attach add to library handlers
+            beansList.querySelectorAll('.add-to-library-btn:not(.added)').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    addToLibrary(btn.dataset.beanId, btn);
+                });
+            });
+        }
+
+        // Add bean to library
+        async function addToLibrary(beanId, btn) {
+            btn.disabled = true;
+
+            try {
+                await api.reviews.addToLibrary(beanId);
+                userLibraryIds.add(beanId);
+
+                btn.classList.add('added');
+                btn.title = 'V knihovne';
+                btn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                `;
+                showToast('Kava pridana do knihovny', 'success');
+            } catch (error) {
+                console.error('Failed to add to library:', error);
+                btn.disabled = false;
+                showToast('Nepodarilo se pridat kavu', 'error');
+            }
+        }
+
+        // Load beans
+        async function loadBeans() {
+            beansList.innerHTML = `
+                <div class="skeleton bean-card-skeleton"></div>
+                <div class="skeleton bean-card-skeleton"></div>
+                <div class="skeleton bean-card-skeleton"></div>
+            `;
+
+            try {
+                const params = {
+                    page: currentPage
+                };
+
+                if (searchQuery) params.search = searchQuery;
+                if (filters.roastery) params.roastery = filters.roastery;
+                if (filters.origin) params.origin = filters.origin;
+                if (filters.roast_profile) params.roast_profile = filters.roast_profile;
+                if (filters.processing) params.processing = filters.processing;
+
+                const response = await api.beans.list(params);
+                const beans = response.results || response;
+                const totalCount = response.count || beans.length;
+                totalPages = Math.ceil(totalCount / 20);
+
+                renderBeans(beans, totalCount);
+            } catch (error) {
+                console.error('Failed to load beans:', error);
+                beansList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3 class="empty-state-title">Chyba nacitani</h3>
+                        <p class="empty-state-text">Nepodarilo se nacist katalog kav</p>
+                        <button class="btn btn-primary" onclick="location.reload()">Zkusit znovu</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Toggle filter panel
+        filterBtn.addEventListener('click', () => {
+            filterBtn.classList.toggle('active');
+            filterPanel.classList.toggle('visible');
+        });
+
+        // Roastery filter change
+        roasteryFilter.addEventListener('change', (e) => {
+            filters.roastery = e.target.value;
+            currentPage = 1;
+            loadBeans();
+        });
+
+        // Origin filter change
+        originFilter.addEventListener('change', (e) => {
+            filters.origin = e.target.value;
+            currentPage = 1;
+            loadBeans();
+        });
+
+        // Roast profile chip click
+        roastChips.addEventListener('click', (e) => {
+            const chip = e.target.closest('.filter-chip');
+            if (chip) {
+                roastChips.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                filters.roast_profile = chip.dataset.value;
+                currentPage = 1;
+                loadBeans();
+            }
+        });
+
+        // Processing chip click
+        processingChips.addEventListener('click', (e) => {
+            const chip = e.target.closest('.filter-chip');
+            if (chip) {
+                processingChips.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+                filters.processing = chip.dataset.value;
+                currentPage = 1;
+                loadBeans();
+            }
+        });
+
+        // Clear filters
+        clearFiltersBtn.addEventListener('click', () => {
+            filters = {
+                roastery: '',
+                origin: '',
+                roast_profile: '',
+                processing: ''
+            };
+            roasteryFilter.value = '';
+            originFilter.value = '';
+            roastChips.querySelectorAll('.filter-chip').forEach((c, i) => {
+                c.classList.toggle('active', i === 0);
+            });
+            processingChips.querySelectorAll('.filter-chip').forEach((c, i) => {
+                c.classList.toggle('active', i === 0);
+            });
+            currentPage = 1;
+            loadBeans();
+        });
+
+        // Search with debounce
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchQuery = e.target.value.trim();
+                currentPage = 1;
+                loadBeans();
+            }, 300);
+        });
+
+        // Pagination
+        prevBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                loadBeans();
+                window.scrollTo(0, 0);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadBeans();
+                window.scrollTo(0, 0);
+            }
+        });
+
+        // Initialize
+        async function init() {
+            await loadUserLibrary();
+            await loadFilterOptions();
+            await loadBeans();
+        }
+
+        init();
+    </script>
+</body>
+</html>

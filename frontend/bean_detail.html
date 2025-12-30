@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Detail kavy - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/bean-detail.css">
+</head>
+<body class="bean-detail-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/beans/" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Detail kavy</h1>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState">
+            <div class="skeleton hero-skeleton"></div>
+        </div>
+
+        <!-- Bean Content -->
+        <div id="beanContent" style="display: none;">
+            <!-- Bean Hero Card -->
+            <div class="bean-hero">
+                <div class="bean-hero-header">
+                    <div class="bean-icon">☕</div>
+                    <div class="bean-header-info">
+                        <h2 class="bean-name" id="beanName">-</h2>
+                        <div class="bean-roastery" id="beanRoastery">-</div>
+                        <div class="bean-origin" id="beanOrigin">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span id="beanOriginText">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rating Display -->
+                <div class="bean-rating-display" id="ratingDisplay">
+                    <div class="rating-big">
+                        <span class="rating-big-value" id="ratingValue">-</span>
+                        <div class="rating-big-stars" id="ratingStars"></div>
+                    </div>
+                    <div class="rating-info">
+                        <div class="rating-count" id="ratingCount">-</div>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="bean-tags" id="beanTags"></div>
+
+                <!-- Details Grid -->
+                <div class="bean-details-grid" id="detailsGrid"></div>
+
+                <!-- Description -->
+                <div class="bean-description" id="descriptionSection" style="display: none;">
+                    <div class="bean-description-label">Popis</div>
+                    <div class="bean-description-text" id="beanDescription"></div>
+                </div>
+
+                <!-- Tasting Notes -->
+                <div class="tasting-notes" id="tastingNotesSection" style="display: none;">
+                    <div class="tasting-notes-label">Chutove noty</div>
+                    <div class="tasting-notes-list" id="tastingNotesList"></div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="bean-actions">
+                <button class="btn btn-secondary" id="addToLibraryBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    <span>Pridat do knihovny</span>
+                </button>
+                <a href="#" class="btn btn-primary" id="writeReviewBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                    <span>Ohodnotit</span>
+                </a>
+            </div>
+
+            <!-- Variants Section -->
+            <div class="variants-section" id="variantsSection" style="display: none;">
+                <div class="section-header">
+                    <h3 class="section-title">Dostupne varianty</h3>
+                </div>
+                <div id="variantsList"></div>
+            </div>
+
+            <!-- Reviews Section -->
+            <div class="reviews-section">
+                <div class="section-header">
+                    <h3 class="section-title">Hodnoceni</h3>
+                </div>
+
+                <!-- User's Own Review -->
+                <div id="myReviewSection" style="display: none;">
+                    <div class="my-review-card">
+                        <div class="my-review-header">
+                            <span class="my-review-label">Moje hodnoceni</span>
+                            <div class="my-review-rating">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                <span id="myReviewRating">-</span>
+                            </div>
+                        </div>
+                        <div class="my-review-text" id="myReviewText"></div>
+                        <div class="my-review-date" id="myReviewDate"></div>
+                    </div>
+                </div>
+
+                <!-- Other Reviews -->
+                <div id="reviewsList"></div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display: none;">
+            <div class="error-state">
+                <div class="error-state-icon">⚠️</div>
+                <h3 class="error-state-title">Kava nenalezena</h3>
+                <p class="error-state-text">Tato kava neexistuje nebo byla odstranena</p>
+                <a href="/beans/" class="btn btn-primary">Zpet do katalogu</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Get bean ID from URL
+        const pathParts = window.location.pathname.split('/');
+        const beanId = pathParts[pathParts.length - 2] || pathParts[pathParts.length - 1];
+
+        // DOM Elements
+        const loadingState = document.getElementById('loadingState');
+        const beanContent = document.getElementById('beanContent');
+        const errorState = document.getElementById('errorState');
+        const toast = document.getElementById('toast');
+
+        // Bean info elements
+        const beanName = document.getElementById('beanName');
+        const beanRoastery = document.getElementById('beanRoastery');
+        const beanOriginText = document.getElementById('beanOriginText');
+        const beanOrigin = document.getElementById('beanOrigin');
+        const ratingValue = document.getElementById('ratingValue');
+        const ratingStars = document.getElementById('ratingStars');
+        const ratingCount = document.getElementById('ratingCount');
+        const ratingDisplay = document.getElementById('ratingDisplay');
+        const beanTags = document.getElementById('beanTags');
+        const detailsGrid = document.getElementById('detailsGrid');
+        const descriptionSection = document.getElementById('descriptionSection');
+        const beanDescription = document.getElementById('beanDescription');
+        const tastingNotesSection = document.getElementById('tastingNotesSection');
+        const tastingNotesList = document.getElementById('tastingNotesList');
+
+        // Action elements
+        const addToLibraryBtn = document.getElementById('addToLibraryBtn');
+        const writeReviewBtn = document.getElementById('writeReviewBtn');
+
+        // Variants
+        const variantsSection = document.getElementById('variantsSection');
+        const variantsList = document.getElementById('variantsList');
+
+        // Reviews
+        const myReviewSection = document.getElementById('myReviewSection');
+        const myReviewRating = document.getElementById('myReviewRating');
+        const myReviewText = document.getElementById('myReviewText');
+        const myReviewDate = document.getElementById('myReviewDate');
+        const reviewsList = document.getElementById('reviewsList');
+
+        // State
+        let bean = null;
+        let isInLibrary = false;
+        let myReview = null;
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Format roast profile
+        function formatRoast(roast) {
+            const roastMap = {
+                'light': 'Svetly',
+                'medium_light': 'Stredne svetly',
+                'medium': 'Stredni',
+                'medium_dark': 'Stredne tmavy',
+                'dark': 'Tmavy'
+            };
+            return roastMap[roast] || roast;
+        }
+
+        // Format processing method
+        function formatProcessing(processing) {
+            const processingMap = {
+                'washed': 'Prane',
+                'natural': 'Natural',
+                'honey': 'Honey',
+                'anaerobic': 'Anaerobni',
+                'other': 'Jine'
+            };
+            return processingMap[processing] || processing;
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('cs-CZ', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Render star rating
+        function renderStars(rating, maxStars = 5) {
+            let html = '';
+            const fullStars = Math.floor(rating);
+            const halfStar = rating % 1 >= 0.5;
+
+            for (let i = 0; i < maxStars; i++) {
+                if (i < fullStars) {
+                    html += '<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+                } else if (i === fullStars && halfStar) {
+                    html += '<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+                } else {
+                    html += '<svg class="empty" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>';
+                }
+            }
+            return html;
+        }
+
+        // Render bean details
+        function renderBean(beanData) {
+            bean = beanData;
+            document.title = `${bean.name} - Kavarna`;
+
+            // Basic info
+            beanName.textContent = bean.name;
+            beanRoastery.textContent = bean.roastery_name || 'Neznama prazirna';
+
+            if (bean.origin_country) {
+                beanOriginText.textContent = bean.region
+                    ? `${bean.region}, ${bean.origin_country}`
+                    : bean.origin_country;
+                beanOrigin.style.display = 'flex';
+            } else {
+                beanOrigin.style.display = 'none';
+            }
+
+            // Rating
+            if (bean.avg_rating) {
+                ratingValue.textContent = parseFloat(bean.avg_rating).toFixed(1);
+                ratingStars.innerHTML = renderStars(parseFloat(bean.avg_rating));
+                ratingCount.textContent = `${bean.review_count || 0} hodnoceni`;
+            } else {
+                ratingDisplay.innerHTML = '<span class="no-rating-text">Zatim zadne hodnoceni</span>';
+            }
+
+            // Tags
+            let tagsHtml = '';
+            if (bean.roast_profile) {
+                tagsHtml += `<span class="bean-tag">${escapeHtml(formatRoast(bean.roast_profile))}</span>`;
+            }
+            if (bean.processing) {
+                tagsHtml += `<span class="bean-tag">${escapeHtml(formatProcessing(bean.processing))}</span>`;
+            }
+            if (bean.brew_method) {
+                tagsHtml += `<span class="bean-tag">${escapeHtml(bean.brew_method)}</span>`;
+            }
+            beanTags.innerHTML = tagsHtml;
+
+            // Details grid
+            let detailsHtml = '';
+            if (bean.roast_profile) {
+                detailsHtml += `
+                    <div class="detail-item">
+                        <div class="detail-label">Prazeni</div>
+                        <div class="detail-value">${escapeHtml(formatRoast(bean.roast_profile))}</div>
+                    </div>
+                `;
+            }
+            if (bean.processing) {
+                detailsHtml += `
+                    <div class="detail-item">
+                        <div class="detail-label">Zpracovani</div>
+                        <div class="detail-value">${escapeHtml(formatProcessing(bean.processing))}</div>
+                    </div>
+                `;
+            }
+            if (bean.roast_date) {
+                detailsHtml += `
+                    <div class="detail-item">
+                        <div class="detail-label">Datum prazeni</div>
+                        <div class="detail-value">${formatDate(bean.roast_date)}</div>
+                    </div>
+                `;
+            }
+            if (bean.origin_country) {
+                detailsHtml += `
+                    <div class="detail-item">
+                        <div class="detail-label">Puvod</div>
+                        <div class="detail-value">${escapeHtml(bean.origin_country)}</div>
+                    </div>
+                `;
+            }
+            detailsGrid.innerHTML = detailsHtml;
+
+            // Description
+            if (bean.description) {
+                beanDescription.textContent = bean.description;
+                descriptionSection.style.display = 'block';
+            }
+
+            // Tasting notes
+            if (bean.tasting_notes && bean.tasting_notes.length > 0) {
+                const notes = typeof bean.tasting_notes === 'string'
+                    ? bean.tasting_notes.split(',')
+                    : bean.tasting_notes;
+
+                tastingNotesList.innerHTML = notes
+                    .map(note => `<span class="tasting-note">${escapeHtml(note.trim())}</span>`)
+                    .join('');
+                tastingNotesSection.style.display = 'block';
+            }
+
+            // Variants
+            if (bean.variants && bean.variants.length > 0) {
+                variantsList.innerHTML = bean.variants.map(variant => `
+                    <div class="variant-card">
+                        <div class="variant-info">
+                            <span class="variant-weight">${variant.package_weight_grams}g</span>
+                            <span class="variant-price">${variant.price_czk} Kc</span>
+                        </div>
+                        ${variant.purchase_url ? `
+                            <a href="${escapeHtml(variant.purchase_url)}" class="variant-link" target="_blank" rel="noopener">
+                                Koupit
+                            </a>
+                        ` : ''}
+                    </div>
+                `).join('');
+                variantsSection.style.display = 'block';
+            }
+
+            // Update write review link
+            writeReviewBtn.href = `/reviews/create/?bean=${beanId}`;
+        }
+
+        // Check if bean is in user's library
+        async function checkLibraryStatus() {
+            if (!AuthStore.isAuthenticated()) return;
+
+            try {
+                const response = await api.reviews.getLibrary();
+                const items = response.results || response || [];
+                const found = items.find(item => item.coffeebean?.id === beanId);
+
+                if (found) {
+                    isInLibrary = true;
+                    addToLibraryBtn.classList.add('added');
+                    addToLibraryBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>V knihovne</span>
+                    `;
+                    addToLibraryBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Failed to check library status:', error);
+            }
+        }
+
+        // Load reviews for this bean
+        async function loadReviews() {
+            try {
+                const response = await api.reviews.getMyReviews();
+                const reviews = response || [];
+
+                // Find user's review for this bean
+                const currentUser = AuthStore.getUser();
+                myReview = reviews.find(r => r.coffeebean?.id === beanId || r.coffeebean === beanId);
+
+                if (myReview) {
+                    myReviewRating.textContent = myReview.rating.toFixed(1);
+                    myReviewText.textContent = myReview.comment || 'Bez komentare';
+                    myReviewDate.textContent = formatDate(myReview.created_at);
+                    myReviewSection.style.display = 'block';
+
+                    // Update button to edit
+                    writeReviewBtn.innerHTML = `
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                        <span>Upravit</span>
+                    `;
+                }
+
+                // TODO: Load other reviews from API when endpoint is available
+                // For now, show empty state if no reviews
+                if (!myReview && (!bean.review_count || bean.review_count === 0)) {
+                    reviewsList.innerHTML = `
+                        <div class="empty-reviews">
+                            <div class="empty-reviews-icon">✍️</div>
+                            <h4 class="empty-reviews-title">Zadna hodnoceni</h4>
+                            <p class="empty-reviews-text">Bud prvni, kdo ohodnoti tuto kavu!</p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Failed to load reviews:', error);
+            }
+        }
+
+        // Add to library
+        async function addToLibrary() {
+            if (!AuthStore.isAuthenticated()) {
+                showToast('Pro pridani do knihovny se prihlaste', 'error');
+                return;
+            }
+
+            addToLibraryBtn.disabled = true;
+
+            try {
+                await api.reviews.addToLibrary(beanId);
+                isInLibrary = true;
+
+                addToLibraryBtn.classList.add('added');
+                addToLibraryBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span>V knihovne</span>
+                `;
+                showToast('Kava pridana do knihovny', 'success');
+
+            } catch (error) {
+                console.error('Failed to add to library:', error);
+                addToLibraryBtn.disabled = false;
+                showToast(error.data?.error || 'Nepodarilo se pridat kavu', 'error');
+            }
+        }
+
+        // Load bean data
+        async function loadBean() {
+            try {
+                const beanData = await api.beans.get(beanId);
+                renderBean(beanData);
+
+                loadingState.style.display = 'none';
+                beanContent.style.display = 'block';
+
+                // Load additional data
+                checkLibraryStatus();
+                loadReviews();
+
+            } catch (error) {
+                console.error('Failed to load bean:', error);
+                loadingState.style.display = 'none';
+
+                if (error instanceof ApiError && error.status === 404) {
+                    errorState.style.display = 'block';
+                } else {
+                    errorState.querySelector('.error-state-title').textContent = 'Chyba nacitani';
+                    errorState.querySelector('.error-state-text').textContent = 'Nepodarilo se nacist data kavy';
+                    errorState.style.display = 'block';
+                }
+            }
+        }
+
+        // Event listeners
+        addToLibraryBtn.addEventListener('click', addToLibrary);
+
+        writeReviewBtn.addEventListener('click', (e) => {
+            if (!AuthStore.isAuthenticated()) {
+                e.preventDefault();
+                showToast('Pro hodnoceni se prihlaste', 'error');
+                return;
+            }
+        });
+
+        // Initialize
+        if (!beanId) {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+        } else {
+            loadBean();
+        }
+    </script>
+</body>
+</html>

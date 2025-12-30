@@ -36,6 +36,7 @@ const Config = {
         MY_REVIEWS: '/reviews/my_reviews/',
         LIBRARY: '/reviews/library/',
         ADD_TO_LIBRARY: '/reviews/library/add/',
+        BEAN_SUMMARY: (beanId) => `/reviews/bean/${beanId}/summary/`,
     },
 
     // Purchases endpoints
@@ -57,6 +58,8 @@ const Config = {
     BEANS: {
         LIST: '/beans/',
         DETAIL: (id) => `/beans/${id}/`,
+        ROASTERIES: '/beans/roasteries/',
+        ORIGINS: '/beans/origins/',
     },
 
     // Storage keys
@@ -81,13 +84,13 @@ const Config = {
         GROUP_DETAIL: (id) => `/groups/${id}/`,
 
         // Library / Reviews
-        LIBRARY: '/library',
+        LIBRARY: '/library/',
         REVIEW_CREATE: '/reviews/create/',
         REVIEW_DETAIL: (id) => `/reviews/${id}`,
 
         // Beans
-        BEANS: '/beans',
-        BEAN_DETAIL: (id) => `/beans/${id}`,
+        BEANS: '/beans/',
+        BEAN_DETAIL: (id) => `/beans/${id}/`,
 
         // Purchases
         PURCHASES: '/purchases',

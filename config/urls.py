@@ -47,12 +47,16 @@ urlpatterns = [
     path('login', serve_frontend, {'page': 'login'}, name='login'),
     path('login.html', serve_frontend, {'page': 'login'}, name='login-html'),
     path('dashboard', serve_frontend, {'page': 'dashboard'}, name='dashboard'),
+    path('dashboard/', serve_frontend, {'page': 'dashboard'}, name='dashboard-slash'),
     path('dashboard.html', serve_frontend, {'page': 'dashboard'}, name='dashboard-html'),
     path('register', serve_frontend, {'page': 'register'}, name='register'),
     path('register.html', serve_frontend, {'page': 'register'}, name='register-html'),
     path('groups/create/', serve_frontend, {'page': 'groups/create'}, name='groups-create'),
     path('groups/list/', serve_frontend, {'page': 'groups/list'}, name='groups-list'),
     path('groups/<uuid:group_id>/', serve_frontend, {'page': 'group_detail'}, name='group-detail'),
+    path('library/', serve_frontend, {'page': 'library'}, name='library'),
+    path('beans/', serve_frontend, {'page': 'beans'}, name='beans'),
+    path('beans/<uuid:bean_id>/', serve_frontend, {'page': 'bean_detail'}, name='bean-detail'),
 ]
 
 # Media files (development only)

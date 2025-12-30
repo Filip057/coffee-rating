@@ -143,29 +143,80 @@
 
     <!-- Add Bean to Library Modal -->
     <div class="modal-overlay" id="addBeanModal">
-        <div class="modal" style="max-width: 400px; text-align: left;">
+        <div class="modal" style="max-width: 420px; text-align: left;">
             <h3 class="modal-title" style="text-align: center; margin-bottom: 16px;">Pridat kavu do knihovny</h3>
             <form id="addBeanForm">
-                <div class="form-group">
-                    <label class="form-label">Vyhledat kavu</label>
-                    <div class="search-wrapper">
-                        <input type="text" class="form-input" id="beanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
-                        <div class="search-results" id="beanSearchResults"></div>
-                    </div>
-                    <input type="hidden" id="selectedBeanId">
-                    <div class="selected-item" id="selectedBeanDisplay" style="display: none;">
-                        <div class="selected-item-icon">☕</div>
-                        <div class="selected-item-info">
-                            <div class="selected-item-name" id="selectedBeanName"></div>
-                            <div class="selected-item-meta" id="selectedBeanMeta"></div>
+                <!-- Search existing bean section -->
+                <div id="searchBeanSection">
+                    <div class="form-group">
+                        <label class="form-label">Vyhledat existujici kavu</label>
+                        <div class="search-wrapper">
+                            <input type="text" class="form-input" id="beanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
+                            <div class="search-results" id="beanSearchResults"></div>
                         </div>
-                        <button type="button" class="selected-item-remove" id="removeBeanBtn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M18 6L6 18M6 6l12 12"/>
-                            </svg>
-                        </button>
+                        <input type="hidden" id="selectedBeanId">
+                        <div class="selected-item" id="selectedBeanDisplay" style="display: none;">
+                            <div class="selected-item-icon">☕</div>
+                            <div class="selected-item-info">
+                                <div class="selected-item-name" id="selectedBeanName"></div>
+                                <div class="selected-item-meta" id="selectedBeanMeta"></div>
+                            </div>
+                            <button type="button" class="selected-item-remove" id="removeBeanBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin: 16px 0;">
+                        <span style="color: var(--steam); font-size: 0.875rem;">Kava neni v katalogu?</span>
+                        <button type="button" id="showCreateBeanBtn" style="background: none; border: none; color: #A47449; font-weight: 500; cursor: pointer; font-size: 0.875rem; text-decoration: underline;">Vytvorit novou</button>
                     </div>
                 </div>
+
+                <!-- Create new bean section (hidden by default) -->
+                <div id="createBeanSection" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <button type="button" id="backToSearchBtn" style="background: none; border: none; color: var(--steam); cursor: pointer; font-size: 0.875rem;">
+                            ← Zpet na vyhledavani
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nazev kavy *</label>
+                        <input type="text" class="form-input" id="newBeanName" placeholder="Napr. Ethiopia Yirgacheffe">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prazirna *</label>
+                        <input type="text" class="form-input" id="newBeanRoastery" placeholder="Napr. Doubleshot">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zeme puvodu <span class="optional">(volitelne)</span></label>
+                        <input type="text" class="form-input" id="newBeanOrigin" placeholder="Napr. Etiopie">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Profil prazeni</label>
+                            <select class="form-select" id="newBeanRoast">
+                                <option value="medium">Stredni</option>
+                                <option value="light">Svetly</option>
+                                <option value="medium_light">Stredne svetly</option>
+                                <option value="medium_dark">Stredne tmavy</option>
+                                <option value="dark">Tmavy</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Zpracovani</label>
+                            <select class="form-select" id="newBeanProcessing">
+                                <option value="washed">Prane (Washed)</option>
+                                <option value="natural">Natural</option>
+                                <option value="honey">Honey</option>
+                                <option value="anaerobic">Anaerobni</option>
+                                <option value="other">Jine</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-error" id="addBeanError"></div>
                 <div class="modal-actions" style="margin-top: 20px;">
                     <button type="button" class="btn btn-secondary" id="cancelAddBeanBtn">Zrusit</button>
@@ -565,11 +616,32 @@
         const submitAddBeanBtn = document.getElementById('submitAddBeanBtn');
         const addBeanError = document.getElementById('addBeanError');
 
+        // Create new bean elements
+        const searchBeanSection = document.getElementById('searchBeanSection');
+        const createBeanSection = document.getElementById('createBeanSection');
+        const showCreateBeanBtn = document.getElementById('showCreateBeanBtn');
+        const backToSearchBtn = document.getElementById('backToSearchBtn');
+        const newBeanName = document.getElementById('newBeanName');
+        const newBeanRoastery = document.getElementById('newBeanRoastery');
+        const newBeanOrigin = document.getElementById('newBeanOrigin');
+        const newBeanRoast = document.getElementById('newBeanRoast');
+        const newBeanProcessing = document.getElementById('newBeanProcessing');
+
         let beanSearchTimeout;
+        let isCreateMode = false;
 
         // Open add bean modal
         addLibraryBtn.addEventListener('click', () => {
             addBeanModal.classList.add('visible');
+            resetAddBeanModal();
+            beanSearchInput.focus();
+        });
+
+        // Reset modal to initial state
+        function resetAddBeanModal() {
+            isCreateMode = false;
+            searchBeanSection.style.display = 'block';
+            createBeanSection.style.display = 'none';
             beanSearchInput.value = '';
             selectedBeanId.value = '';
             selectedBeanDisplay.style.display = 'none';
@@ -577,8 +649,14 @@
             beanSearchResults.classList.remove('visible');
             addBeanError.classList.remove('visible');
             submitAddBeanBtn.disabled = true;
-            beanSearchInput.focus();
-        });
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Pridat';
+            // Reset create form fields
+            newBeanName.value = '';
+            newBeanRoastery.value = '';
+            newBeanOrigin.value = '';
+            newBeanRoast.value = 'medium';
+            newBeanProcessing.value = 'washed';
+        }
 
         // Close add bean modal
         function closeAddBeanModal() {
@@ -588,6 +666,26 @@
         cancelAddBeanBtn.addEventListener('click', closeAddBeanModal);
         addBeanModal.addEventListener('click', (e) => {
             if (e.target === addBeanModal) closeAddBeanModal();
+        });
+
+        // Toggle to create mode
+        showCreateBeanBtn.addEventListener('click', () => {
+            isCreateMode = true;
+            searchBeanSection.style.display = 'none';
+            createBeanSection.style.display = 'block';
+            submitAddBeanBtn.disabled = false;
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Vytvorit a pridat';
+            newBeanName.focus();
+        });
+
+        // Toggle back to search mode
+        backToSearchBtn.addEventListener('click', () => {
+            isCreateMode = false;
+            searchBeanSection.style.display = 'block';
+            createBeanSection.style.display = 'none';
+            submitAddBeanBtn.disabled = !selectedBeanId.value;
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Pridat';
+            beanSearchInput.focus();
         });
 
         // Search beans
@@ -606,7 +704,7 @@
                     const beans = response.results || response;
 
                     if (beans.length === 0) {
-                        beanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky</div>';
+                        beanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky - zkuste vytvorit novou kavu</div>';
                     } else {
                         beanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
                             <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
@@ -649,21 +747,51 @@
         // Submit add bean form
         addBeanForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            const beanId = selectedBeanId.value;
-            if (!beanId) return;
+            addBeanError.classList.remove('visible');
 
             submitAddBeanBtn.disabled = true;
             submitAddBeanBtn.classList.add('btn-loading');
-            addBeanError.classList.remove('visible');
 
             try {
+                let beanId;
+
+                if (isCreateMode) {
+                    // Validate create form
+                    const name = newBeanName.value.trim();
+                    const roastery = newBeanRoastery.value.trim();
+
+                    if (!name) {
+                        throw { data: { error: 'Zadejte nazev kavy' } };
+                    }
+                    if (!roastery) {
+                        throw { data: { error: 'Zadejte nazev prazirny' } };
+                    }
+
+                    // Create new bean
+                    const newBean = await api.beans.create({
+                        name: name,
+                        roastery_name: roastery,
+                        origin_country: newBeanOrigin.value.trim() || undefined,
+                        roast_profile: newBeanRoast.value,
+                        processing: newBeanProcessing.value
+                    });
+                    beanId = newBean.id;
+                } else {
+                    // Use selected existing bean
+                    beanId = selectedBeanId.value;
+                    if (!beanId) {
+                        throw { data: { error: 'Vyberte kavu' } };
+                    }
+                }
+
+                // Add bean to group library
                 await api.groups.addToLibrary(groupId, beanId);
                 closeAddBeanModal();
                 loadLibrary(); // Refresh the library list
+
             } catch (error) {
                 console.error('Failed to add bean:', error);
-                addBeanError.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se pridat kavu';
+                addBeanError.textContent = error.data?.error || error.data?.detail || error.data?.name?.[0] || 'Nepodarilo se pridat kavu';
                 addBeanError.classList.add('visible');
                 submitAddBeanBtn.disabled = false;
             } finally {
