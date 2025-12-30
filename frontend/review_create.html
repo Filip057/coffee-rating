@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Ohodnotit kavu - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/review-create.css">
+</head>
+<body class="review-create-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/library/" class="back-btn" id="backBtn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title" id="pageTitle">Ohodnotit kavu</h1>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState">
+            <div class="skeleton bean-preview-skeleton"></div>
+        </div>
+
+        <!-- No Bean State -->
+        <div id="noBeanState" style="display: none;">
+            <div class="no-bean-state">
+                <div class="no-bean-icon">☕</div>
+                <h3 class="no-bean-title">Zadna kava nevybrana</h3>
+                <p class="no-bean-text">Vyberte kavu z katalogu nebo knihovny, kterou chcete ohodnotit</p>
+                <a href="/beans/" class="btn btn-primary">Prozkoumat kavy</a>
+            </div>
+        </div>
+
+        <!-- Review Form -->
+        <div id="reviewForm" style="display: none;">
+            <!-- Bean Preview -->
+            <div class="bean-preview">
+                <div class="bean-preview-icon">☕</div>
+                <div class="bean-preview-info">
+                    <div class="bean-preview-name" id="beanName">-</div>
+                    <div class="bean-preview-meta" id="beanMeta">-</div>
+                </div>
+                <a href="/beans/" class="bean-preview-change">Zmenit</a>
+            </div>
+
+            <form id="createReviewForm">
+                <!-- Overall Rating -->
+                <div class="form-section">
+                    <div class="star-rating-input">
+                        <div class="star-rating-label">Celkove hodnoceni *</div>
+                        <div class="star-rating-stars" id="starRating">
+                            <button type="button" class="star-btn" data-value="1">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </button>
+                            <button type="button" class="star-btn" data-value="2">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </button>
+                            <button type="button" class="star-btn" data-value="3">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </button>
+                            <button type="button" class="star-btn" data-value="4">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </button>
+                            <button type="button" class="star-btn" data-value="5">
+                                <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                            </button>
+                        </div>
+                        <div class="star-rating-value" id="ratingValue"></div>
+                    </div>
+                </div>
+
+                <!-- Detailed Scores -->
+                <div class="form-section">
+                    <h3 class="section-title">Detailni hodnoceni (volitelne)</h3>
+                    <div class="score-sliders">
+                        <div class="score-item">
+                            <div class="score-header">
+                                <span class="score-label">Aroma</span>
+                                <span class="score-value" id="aromaValue">-</span>
+                            </div>
+                            <input type="range" class="score-slider" id="aromaScore" min="0" max="5" step="0.5" value="0">
+                        </div>
+                        <div class="score-item">
+                            <div class="score-header">
+                                <span class="score-label">Chut</span>
+                                <span class="score-value" id="flavorValue">-</span>
+                            </div>
+                            <input type="range" class="score-slider" id="flavorScore" min="0" max="5" step="0.5" value="0">
+                        </div>
+                        <div class="score-item">
+                            <div class="score-header">
+                                <span class="score-label">Kyselost</span>
+                                <span class="score-value" id="acidityValue">-</span>
+                            </div>
+                            <input type="range" class="score-slider" id="acidityScore" min="0" max="5" step="0.5" value="0">
+                        </div>
+                        <div class="score-item">
+                            <div class="score-header">
+                                <span class="score-label">Telo</span>
+                                <span class="score-value" id="bodyValue">-</span>
+                            </div>
+                            <input type="range" class="score-slider" id="bodyScore" min="0" max="5" step="0.5" value="0">
+                        </div>
+                        <div class="score-item">
+                            <div class="score-header">
+                                <span class="score-label">Dochut</span>
+                                <span class="score-value" id="aftertasteValue">-</span>
+                            </div>
+                            <input type="range" class="score-slider" id="aftertasteScore" min="0" max="5" step="0.5" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Brew Method -->
+                <div class="form-section">
+                    <h3 class="section-title">Metoda pripravy</h3>
+                    <div class="brew-method-pills" id="brewMethods">
+                        <button type="button" class="brew-pill" data-value="espresso">Espresso</button>
+                        <button type="button" class="brew-pill" data-value="filter">Filter</button>
+                        <button type="button" class="brew-pill" data-value="french_press">French Press</button>
+                        <button type="button" class="brew-pill" data-value="aeropress">Aeropress</button>
+                        <button type="button" class="brew-pill" data-value="moka">Moka</button>
+                        <button type="button" class="brew-pill" data-value="pour_over">Pour Over</button>
+                        <button type="button" class="brew-pill" data-value="cold_brew">Cold Brew</button>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-section">
+                    <h3 class="section-title">Poznamky</h3>
+                    <div class="form-group">
+                        <textarea class="form-textarea" id="notes" placeholder="Napiste sve poznamky k teto kave..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Would Buy Again -->
+                <div class="form-section">
+                    <h3 class="section-title">Koupili byste znovu?</h3>
+                    <div class="toggle-group">
+                        <button type="button" class="toggle-btn yes" id="buyAgainYes" data-value="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            Ano
+                        </button>
+                        <button type="button" class="toggle-btn no" id="buyAgainNo" data-value="false">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                            Ne
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div class="form-error" id="formError"></div>
+
+                <!-- Submit -->
+                <div class="submit-section">
+                    <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                        <span class="btn-text">Ulozit hodnoceni</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // Get bean ID from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const beanId = urlParams.get('bean');
+        const editReviewId = urlParams.get('edit');
+
+        // DOM Elements
+        const loadingState = document.getElementById('loadingState');
+        const noBeanState = document.getElementById('noBeanState');
+        const reviewFormContainer = document.getElementById('reviewForm');
+        const createReviewForm = document.getElementById('createReviewForm');
+        const pageTitle = document.getElementById('pageTitle');
+        const backBtn = document.getElementById('backBtn');
+        const beanName = document.getElementById('beanName');
+        const beanMeta = document.getElementById('beanMeta');
+        const starRating = document.getElementById('starRating');
+        const ratingValue = document.getElementById('ratingValue');
+        const brewMethods = document.getElementById('brewMethods');
+        const notes = document.getElementById('notes');
+        const buyAgainYes = document.getElementById('buyAgainYes');
+        const buyAgainNo = document.getElementById('buyAgainNo');
+        const submitBtn = document.getElementById('submitBtn');
+        const formError = document.getElementById('formError');
+        const toast = document.getElementById('toast');
+
+        // Score sliders
+        const aromaScore = document.getElementById('aromaScore');
+        const flavorScore = document.getElementById('flavorScore');
+        const acidityScore = document.getElementById('acidityScore');
+        const bodyScore = document.getElementById('bodyScore');
+        const aftertasteScore = document.getElementById('aftertasteScore');
+
+        // State
+        let bean = null;
+        let selectedRating = 0;
+        let selectedBrewMethod = '';
+        let wouldBuyAgain = null;
+        let existingReview = null;
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Update star rating display
+        function updateStarRating(rating) {
+            selectedRating = rating;
+            const stars = starRating.querySelectorAll('.star-btn');
+            stars.forEach((star, index) => {
+                star.classList.toggle('active', index < rating);
+            });
+
+            const ratingLabels = {
+                1: 'Spatna',
+                2: 'Podprumerna',
+                3: 'Prumerna',
+                4: 'Dobra',
+                5: 'Vynikajici'
+            };
+            ratingValue.textContent = rating > 0 ? `${rating}/5 - ${ratingLabels[rating]}` : '';
+
+            // Enable submit if rating is selected
+            submitBtn.disabled = rating === 0;
+        }
+
+        // Update score slider value display
+        function updateScoreDisplay(slider, valueEl) {
+            const value = parseFloat(slider.value);
+            valueEl.textContent = value > 0 ? value.toFixed(1) : '-';
+        }
+
+        // Star rating click handler
+        starRating.addEventListener('click', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (star) {
+                updateStarRating(parseInt(star.dataset.value));
+            }
+        });
+
+        // Star rating hover effects
+        starRating.addEventListener('mouseover', (e) => {
+            const star = e.target.closest('.star-btn');
+            if (star) {
+                const value = parseInt(star.dataset.value);
+                const stars = starRating.querySelectorAll('.star-btn');
+                stars.forEach((s, index) => {
+                    s.classList.toggle('hover', index < value);
+                });
+            }
+        });
+
+        starRating.addEventListener('mouseout', () => {
+            const stars = starRating.querySelectorAll('.star-btn');
+            stars.forEach(s => s.classList.remove('hover'));
+        });
+
+        // Score slider handlers
+        [
+            { slider: aromaScore, valueEl: document.getElementById('aromaValue') },
+            { slider: flavorScore, valueEl: document.getElementById('flavorValue') },
+            { slider: acidityScore, valueEl: document.getElementById('acidityValue') },
+            { slider: bodyScore, valueEl: document.getElementById('bodyValue') },
+            { slider: aftertasteScore, valueEl: document.getElementById('aftertasteValue') }
+        ].forEach(({ slider, valueEl }) => {
+            slider.addEventListener('input', () => updateScoreDisplay(slider, valueEl));
+        });
+
+        // Brew method click handler
+        brewMethods.addEventListener('click', (e) => {
+            const pill = e.target.closest('.brew-pill');
+            if (pill) {
+                brewMethods.querySelectorAll('.brew-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                selectedBrewMethod = pill.dataset.value;
+            }
+        });
+
+        // Would buy again handlers
+        buyAgainYes.addEventListener('click', () => {
+            buyAgainYes.classList.add('active');
+            buyAgainNo.classList.remove('active');
+            wouldBuyAgain = true;
+        });
+
+        buyAgainNo.addEventListener('click', () => {
+            buyAgainNo.classList.add('active');
+            buyAgainYes.classList.remove('active');
+            wouldBuyAgain = false;
+        });
+
+        // Load bean data
+        async function loadBean() {
+            if (!beanId) {
+                loadingState.style.display = 'none';
+                noBeanState.style.display = 'block';
+                return;
+            }
+
+            try {
+                bean = await api.beans.get(beanId);
+                beanName.textContent = bean.name;
+                beanMeta.textContent = bean.roastery_name || 'Neznama prazirna';
+
+                // Set back button to bean detail
+                backBtn.href = `/beans/${beanId}/`;
+
+                // Check for existing review
+                await checkExistingReview();
+
+                loadingState.style.display = 'none';
+                reviewFormContainer.style.display = 'block';
+
+            } catch (error) {
+                console.error('Failed to load bean:', error);
+                loadingState.style.display = 'none';
+                noBeanState.style.display = 'block';
+            }
+        }
+
+        // Check if user already has a review for this bean
+        async function checkExistingReview() {
+            try {
+                const reviews = await api.reviews.getMyReviews();
+                existingReview = reviews.find(r =>
+                    r.coffeebean?.id === beanId || r.coffeebean === beanId
+                );
+
+                if (existingReview) {
+                    pageTitle.textContent = 'Upravit hodnoceni';
+                    submitBtn.querySelector('.btn-text').textContent = 'Ulozit zmeny';
+
+                    // Populate form with existing data
+                    updateStarRating(Math.round(existingReview.rating));
+
+                    if (existingReview.aroma_score) aromaScore.value = existingReview.aroma_score;
+                    if (existingReview.flavor_score) flavorScore.value = existingReview.flavor_score;
+                    if (existingReview.acidity_score) acidityScore.value = existingReview.acidity_score;
+                    if (existingReview.body_score) bodyScore.value = existingReview.body_score;
+                    if (existingReview.aftertaste_score) aftertasteScore.value = existingReview.aftertaste_score;
+
+                    // Update slider displays
+                    updateScoreDisplay(aromaScore, document.getElementById('aromaValue'));
+                    updateScoreDisplay(flavorScore, document.getElementById('flavorValue'));
+                    updateScoreDisplay(acidityScore, document.getElementById('acidityValue'));
+                    updateScoreDisplay(bodyScore, document.getElementById('bodyValue'));
+                    updateScoreDisplay(aftertasteScore, document.getElementById('aftertasteValue'));
+
+                    if (existingReview.brew_method) {
+                        selectedBrewMethod = existingReview.brew_method;
+                        brewMethods.querySelector(`[data-value="${existingReview.brew_method}"]`)?.classList.add('active');
+                    }
+
+                    if (existingReview.notes) {
+                        notes.value = existingReview.notes;
+                    }
+
+                    if (existingReview.would_buy_again !== null) {
+                        wouldBuyAgain = existingReview.would_buy_again;
+                        if (wouldBuyAgain) {
+                            buyAgainYes.classList.add('active');
+                        } else {
+                            buyAgainNo.classList.add('active');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check existing review:', error);
+            }
+        }
+
+        // Form submission
+        createReviewForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            formError.classList.remove('visible');
+
+            if (selectedRating === 0) {
+                formError.textContent = 'Vyberte hodnoceni (1-5 hvezdicek)';
+                formError.classList.add('visible');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-loading');
+
+            try {
+                const reviewData = {
+                    coffeebean: beanId,
+                    rating: selectedRating,
+                };
+
+                // Add optional fields
+                if (parseFloat(aromaScore.value) > 0) reviewData.aroma_score = parseFloat(aromaScore.value);
+                if (parseFloat(flavorScore.value) > 0) reviewData.flavor_score = parseFloat(flavorScore.value);
+                if (parseFloat(acidityScore.value) > 0) reviewData.acidity_score = parseFloat(acidityScore.value);
+                if (parseFloat(bodyScore.value) > 0) reviewData.body_score = parseFloat(bodyScore.value);
+                if (parseFloat(aftertasteScore.value) > 0) reviewData.aftertaste_score = parseFloat(aftertasteScore.value);
+                if (selectedBrewMethod) reviewData.brew_method = selectedBrewMethod;
+                if (notes.value.trim()) reviewData.notes = notes.value.trim();
+                if (wouldBuyAgain !== null) reviewData.would_buy_again = wouldBuyAgain;
+
+                if (existingReview) {
+                    // Update existing review
+                    await api.reviews.update(existingReview.id, reviewData);
+                    showToast('Hodnoceni bylo aktualizovano', 'success');
+                } else {
+                    // Create new review
+                    await api.reviews.create(reviewData);
+                    showToast('Hodnoceni bylo ulozeno', 'success');
+                }
+
+                // Redirect back to bean detail
+                setTimeout(() => {
+                    window.location.href = `/beans/${beanId}/`;
+                }, 1000);
+
+            } catch (error) {
+                console.error('Failed to save review:', error);
+                formError.textContent = error.data?.error || error.data?.detail || error.data?.rating?.[0] || 'Nepodarilo se ulozit hodnoceni';
+                formError.classList.add('visible');
+                submitBtn.disabled = false;
+            } finally {
+                submitBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // Initialize
+        loadBean();
+    </script>
+</body>
+</html>

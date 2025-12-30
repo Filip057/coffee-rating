@@ -433,6 +433,43 @@ const api = {
                 body: JSON.stringify(data),
             });
         },
+
+        /**
+         * Get payment shares
+         * @param {Object} options - { status?: string, purchase?: string }
+         * @returns {Promise<Array>}
+         */
+        async getShares(options = {}) {
+            const params = new URLSearchParams();
+            if (options.status) params.append('status', options.status);
+            if (options.purchase) params.append('purchase', options.purchase);
+
+            const query = params.toString();
+            const endpoint = query ? `${Config.PURCHASES.SHARES}?${query}` : Config.PURCHASES.SHARES;
+            return request(endpoint);
+        },
+
+        /**
+         * Mark a payment share as paid
+         * @param {string} shareId - Payment share ID
+         * @param {Object} data - { payment_reference?, note? }
+         * @returns {Promise<Object>}
+         */
+        async markPaid(shareId, data = {}) {
+            return request(Config.PURCHASES.MARK_PAID(shareId), {
+                method: 'POST',
+                body: JSON.stringify(data),
+            });
+        },
+
+        /**
+         * Get purchase details
+         * @param {string} id - Purchase ID
+         * @returns {Promise<Object>}
+         */
+        async get(id) {
+            return request(Config.PURCHASES.DETAIL(id));
+        },
     },
 
     /**

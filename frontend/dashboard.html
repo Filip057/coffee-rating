@@ -211,14 +211,14 @@
                                 <div class="user-dropdown-name" id="dropdownName">-</div>
                                 <div class="user-dropdown-email" id="dropdownEmail">-</div>
                             </div>
-                            <a href="#" class="user-dropdown-item">
+                            <a href="/profile/" class="user-dropdown-item">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                                     <circle cx="12" cy="7" r="4"/>
                                 </svg>
                                 Muj profil
                             </a>
-                            <a href="#" class="user-dropdown-item">
+                            <a href="/profile/" class="user-dropdown-item">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                     <circle cx="12" cy="12" r="3"/>
                                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -259,7 +259,7 @@
         <!-- Main Navigation Cards -->
         <section class="section">
             <div class="nav-cards">
-                <a href="#" class="nav-card animate-fade-in-up delay-1">
+                <a href="/groups/list/" class="nav-card animate-fade-in-up delay-1">
                     <div class="nav-card-icon groups">👥</div>
                     <div class="nav-card-content">
                         <h3>Skupiny</h3>
@@ -277,7 +277,7 @@
                     </div>
                 </a>
 
-                <a href="#" class="nav-card animate-fade-in-up delay-3">
+                <a href="/beans/" class="nav-card animate-fade-in-up delay-3">
                     <div class="nav-card-icon discover">🔍</div>
                     <div class="nav-card-content">
                         <h3>Objevovat</h3>
@@ -286,7 +286,7 @@
                     </div>
                 </a>
 
-                <a href="#" class="nav-card animate-fade-in-up delay-4">
+                <a href="/purchases/" class="nav-card animate-fade-in-up delay-4">
                     <div class="nav-card-icon purchases">💰</div>
                     <div class="nav-card-content">
                         <h3>Nakupy</h3>
@@ -330,22 +330,22 @@
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
-        <a href="#" class="fab-menu-item"><span>☕</span><span>Pridat kavu</span></a>
-        <a href="${Config.ROUTES.REVIEW_CREATE}" class="fab-menu-item"><span>⭐</span><span>Nove hodnoceni</span></a>
-        <a href="#" class="fab-menu-item"><span>🛒</span><span>Zaznamenat nakup</span></a>
+        <a href="/beans/" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></a>
+        <a href="/library/" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></a>
+        <a href="#" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 
     <!-- Bottom Navigation -->
     <nav class="bottom-nav" aria-label="Hlavni navigace">
         <div class="nav-items">
-            <a class="nav-item active" href="#" aria-current="page">
+            <a class="nav-item active" href="/dashboard" aria-current="page">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
                     <path d="M9 22V12h6v10"/>
                 </svg>
                 <span>Domu</span>
             </a>
-            <a class="nav-item" href="#">
+            <a class="nav-item" href="/beans/">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <circle cx="11" cy="11" r="8"/>
                     <path d="m21 21-4.35-4.35"/>
@@ -359,7 +359,7 @@
                 </svg>
             </button>
 
-            <a class="nav-item" href="#">
+            <a class="nav-item" href="/groups/list/">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
@@ -368,7 +368,7 @@
                 </svg>
                 <span>Skupiny</span>
             </a>
-            <a class="nav-item" href="#">
+            <a class="nav-item" href="/profile/">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                     <circle cx="12" cy="7" r="4"/>
@@ -498,39 +498,6 @@
             renderPayments(data.payments);
         }
 
-        // Render groups grid (2x2: add button + max 3 groups)
-        function renderGroups(groups) {
-            const groupsList = document.getElementById('groupsList');
-            let html = '';
-
-            // Add button always first
-            html += `
-                <a href="${Config.ROUTES.GROUP_CREATE}" class="group-card group-card-add">
-                    <div class="group-card-icon">+</div>
-                    <div class="group-card-info">
-                        <h4>Pridat skupinu</h4>
-                        <p>Vytvorit nebo pripojit</p>
-                    </div>
-                </a>
-            `;
-
-            // Show max 3 groups (to fill 2x2 grid)
-            groups.slice(0, 3).forEach(group => {
-                const groupUrl = `/groups/${group.id}/`;
-                html += `
-                    <a href="${groupUrl}" class="group-card" data-group-id="${group.id}">
-                        <div class="group-card-icon">${group.icon || '👥'}</div>
-                        <div class="group-card-info">
-                            <h4>${escapeHtml(group.name)}</h4>
-                            <p>${group.member_count || 0} clenu</p>
-                        </div>
-                    </a>
-                `;
-            });
-
-            groupsList.innerHTML = html;
-        }
-
         // Render payments list
         function renderPayments(payments) {
             const paymentsSection = document.getElementById('paymentsSection');
@@ -656,6 +623,58 @@
                 if (dropdownOpen) closeDropdown();
             }
         });
+
+        // FAB menu item handlers
+        const fabAddPurchase = document.getElementById('fabAddPurchase');
+        let userGroups = [];
+
+        fabAddPurchase.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleFab();
+
+            if (userGroups.length > 0) {
+                // Go to first group to add purchase
+                window.location.href = `/groups/${userGroups[0].id}/`;
+            } else {
+                // No groups - redirect to create group
+                alert('Pro zaznamenani nakupu musite byt clenem skupiny. Vytvorte nebo se pripojte ke skupine.');
+                window.location.href = Config.ROUTES.GROUP_CREATE;
+            }
+        });
+
+        // Store groups when loaded
+        function renderGroups(groups) {
+            userGroups = groups; // Store for FAB purchase button
+            const groupsList = document.getElementById('groupsList');
+            let html = '';
+
+            // Add button always first
+            html += `
+                <a href="${Config.ROUTES.GROUP_CREATE}" class="group-card group-card-add">
+                    <div class="group-card-icon">+</div>
+                    <div class="group-card-info">
+                        <h4>Pridat skupinu</h4>
+                        <p>Vytvorit nebo pripojit</p>
+                    </div>
+                </a>
+            `;
+
+            // Show max 3 groups (to fill 2x2 grid)
+            groups.slice(0, 3).forEach(group => {
+                const groupUrl = `/groups/${group.id}/`;
+                html += `
+                    <a href="${groupUrl}" class="group-card" data-group-id="${group.id}">
+                        <div class="group-card-icon">${group.icon || '👥'}</div>
+                        <div class="group-card-info">
+                            <h4>${escapeHtml(group.name)}</h4>
+                            <p>${group.member_count || 0} clenu</p>
+                        </div>
+                    </a>
+                `;
+            });
+
+            groupsList.innerHTML = html;
+        }
 
         // Initialize
         updateGreeting();

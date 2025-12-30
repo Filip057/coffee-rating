@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Nakupy - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/purchases.css">
+</head>
+<body class="purchases-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Nakupy</h1>
+        </header>
+
+        <!-- Outstanding Summary -->
+        <div class="outstanding-card" id="outstandingCard">
+            <div class="outstanding-label">Dluzna castka</div>
+            <div class="outstanding-amount" id="outstandingAmount">-</div>
+            <div class="outstanding-detail" id="outstandingDetail">Nacitam...</div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="outstanding">Nezaplacene</button>
+            <button class="tab-btn" data-tab="my-purchases">Moje nakupy</button>
+            <button class="tab-btn" data-tab="history">Historie</button>
+        </div>
+
+        <!-- Tab Content: Outstanding Payments -->
+        <div class="tab-content active" id="tab-outstanding">
+            <div class="payment-list" id="outstandingList">
+                <div class="skeleton payment-skeleton"></div>
+                <div class="skeleton payment-skeleton"></div>
+            </div>
+        </div>
+
+        <!-- Tab Content: My Purchases -->
+        <div class="tab-content" id="tab-my-purchases">
+            <div id="myPurchasesList">
+                <div class="skeleton payment-skeleton"></div>
+                <div class="skeleton payment-skeleton"></div>
+            </div>
+        </div>
+
+        <!-- Tab Content: History -->
+        <div class="tab-content" id="tab-history">
+            <div class="payment-list" id="historyList">
+                <div class="skeleton payment-skeleton"></div>
+                <div class="skeleton payment-skeleton"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal">
+            <h3 class="modal-title">Zaplatit</h3>
+            <p class="modal-subtitle" id="qrBeanName">-</p>
+            <div class="qr-code" id="qrCodeContainer">
+                <div style="width: 200px; height: 200px; background: var(--latte); display: flex; align-items: center; justify-content: center; color: var(--steam);">
+                    QR kod neni k dispozici
+                </div>
+            </div>
+            <div class="qr-amount" id="qrAmount">-</div>
+            <div class="modal-actions">
+                <button class="btn btn-success btn-full" id="markPaidBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <span class="btn-text">Oznacit jako zaplaceno</span>
+                    <span class="spinner"></span>
+                </button>
+                <button class="btn btn-secondary btn-full" id="closeQrModal">Zavrit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // DOM Elements
+        const outstandingCard = document.getElementById('outstandingCard');
+        const outstandingAmount = document.getElementById('outstandingAmount');
+        const outstandingDetail = document.getElementById('outstandingDetail');
+        const outstandingList = document.getElementById('outstandingList');
+        const myPurchasesList = document.getElementById('myPurchasesList');
+        const historyList = document.getElementById('historyList');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const qrModal = document.getElementById('qrModal');
+        const qrCodeContainer = document.getElementById('qrCodeContainer');
+        const qrBeanName = document.getElementById('qrBeanName');
+        const qrAmount = document.getElementById('qrAmount');
+        const markPaidBtn = document.getElementById('markPaidBtn');
+        const closeQrModal = document.getElementById('closeQrModal');
+        const toast = document.getElementById('toast');
+
+        // State
+        let currentShareId = null;
+        let outstandingPayments = [];
+        let myPurchases = [];
+        let paidPayments = [];
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Format currency
+        function formatCZK(amount) {
+            return new Intl.NumberFormat('cs-CZ', {
+                style: 'currency',
+                currency: 'CZK',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('cs-CZ', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Tab switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                btn.classList.add('active');
+                document.getElementById(`tab-${tabId}`).classList.add('active');
+            });
+        });
+
+        // Render outstanding summary
+        function renderOutstandingSummary(payments) {
+            const total = payments.reduce((sum, p) => sum + parseFloat(p.amount_czk || 0), 0);
+            const count = payments.length;
+
+            outstandingAmount.textContent = formatCZK(total);
+
+            if (total === 0) {
+                outstandingCard.classList.add('paid');
+                outstandingDetail.textContent = 'Vse je zaplaceno!';
+            } else {
+                outstandingCard.classList.remove('paid');
+                outstandingDetail.textContent = `${count} ${count === 1 ? 'nezaplacena platba' : count < 5 ? 'nezaplacene platby' : 'nezaplacenych plateb'}`;
+            }
+        }
+
+        // Render outstanding payments
+        function renderOutstandingPayments(payments) {
+            if (payments.length === 0) {
+                outstandingList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <h3 class="empty-state-title">Vse zaplaceno</h3>
+                        <p class="empty-state-text">Nemate zadne nezaplacene platby</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            payments.forEach(payment => {
+                const purchase = payment.purchase_detail || {};
+                const beanName = purchase.coffeebean?.name || 'Neznama kava';
+                const roastery = purchase.coffeebean?.roastery_name || '';
+                const groupName = purchase.group_name || '';
+                const boughtBy = purchase.bought_by?.display_name || 'Neznamy';
+
+                html += `
+                    <div class="payment-card unpaid">
+                        <div class="payment-header">
+                            <div>
+                                <div class="payment-bean">${escapeHtml(beanName)}</div>
+                                <div class="payment-group">${escapeHtml(roastery)}${groupName ? ' • ' + escapeHtml(groupName) : ''}</div>
+                            </div>
+                            <div class="payment-amount">${formatCZK(payment.amount_czk)}</div>
+                        </div>
+                        <div class="payment-details">
+                            <div class="payment-detail">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                    <circle cx="12" cy="7" r="4"/>
+                                </svg>
+                                Koupil: ${escapeHtml(boughtBy)}
+                            </div>
+                            <div class="payment-detail">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                ${formatDate(purchase.date || payment.created_at)}
+                            </div>
+                        </div>
+                        <div class="payment-actions">
+                            <button class="btn btn-primary" onclick="showPaymentQR('${payment.id}', '${escapeHtml(beanName)}', ${payment.amount_czk}, '${payment.qr_url || ''}')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                </svg>
+                                Zaplatit
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            outstandingList.innerHTML = html;
+        }
+
+        // Render my purchases
+        function renderMyPurchases(purchases) {
+            if (purchases.length === 0) {
+                myPurchasesList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">🛒</div>
+                        <h3 class="empty-state-title">Zadne nakupy</h3>
+                        <p class="empty-state-text">Zatim jste nezaznamenali zadny nakup</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            purchases.forEach(purchase => {
+                const beanName = purchase.coffeebean?.name || purchase.coffeebean_name || 'Neznama kava';
+                const totalCollected = parseFloat(purchase.total_collected_czk || 0);
+                const totalPrice = parseFloat(purchase.total_price_czk || 0);
+                const progress = totalPrice > 0 ? (totalCollected / totalPrice * 100) : 0;
+                const shares = purchase.payment_shares || [];
+                const paidShares = shares.filter(s => s.status === 'paid').length;
+                const totalShares = shares.length;
+
+                html += `
+                    <div class="purchase-card">
+                        <div class="purchase-header">
+                            <div class="purchase-info">
+                                <h4>${escapeHtml(beanName)}</h4>
+                                <p>${formatDate(purchase.date || purchase.created_at)}</p>
+                            </div>
+                            <div class="purchase-total">
+                                <div class="purchase-total-label">Celkem</div>
+                                <div class="purchase-total-amount">${formatCZK(totalPrice)}</div>
+                            </div>
+                        </div>
+                        <div class="purchase-progress">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span>${formatCZK(totalCollected)} vybrano</span>
+                                <span>${paidShares}/${totalShares} zaplaceno</span>
+                            </div>
+                        </div>
+                        ${shares.length > 0 ? `
+                            <div class="purchase-shares">
+                                ${shares.map(share => `
+                                    <div class="share-badge ${share.status === 'paid' ? 'paid' : ''}">
+                                        ${share.status === 'paid' ? `
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>
+                                        ` : ''}
+                                        ${escapeHtml(share.user?.display_name || share.user?.email || 'Uzivatel')}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            myPurchasesList.innerHTML = html;
+        }
+
+        // Render payment history
+        function renderHistory(payments) {
+            if (payments.length === 0) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <h3 class="empty-state-title">Zadna historie</h3>
+                        <p class="empty-state-text">Zatim jste nezaplatili zadnou platbu</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            payments.forEach(payment => {
+                const purchase = payment.purchase_detail || {};
+                const beanName = purchase.coffeebean?.name || 'Neznama kava';
+                const roastery = purchase.coffeebean?.roastery_name || '';
+
+                html += `
+                    <div class="payment-card paid">
+                        <div class="payment-header">
+                            <div>
+                                <div class="payment-bean">${escapeHtml(beanName)}</div>
+                                <div class="payment-group">${escapeHtml(roastery)}</div>
+                            </div>
+                            <div class="payment-amount paid">${formatCZK(payment.amount_czk)}</div>
+                        </div>
+                        <div class="payment-details">
+                            <div class="payment-detail">
+                                <span class="status-badge paid">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Zaplaceno
+                                </span>
+                            </div>
+                            <div class="payment-detail">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                ${formatDate(payment.paid_at || payment.updated_at)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            historyList.innerHTML = html;
+        }
+
+        // Show payment QR modal
+        window.showPaymentQR = function(shareId, beanName, amount, qrUrl) {
+            currentShareId = shareId;
+            qrBeanName.textContent = beanName;
+            qrAmount.textContent = formatCZK(amount);
+
+            if (qrUrl) {
+                qrCodeContainer.innerHTML = `<img src="${qrUrl}" alt="QR kod pro platbu" style="width: 200px; height: 200px;">`;
+            } else {
+                qrCodeContainer.innerHTML = `
+                    <div style="width: 200px; height: 200px; background: var(--latte); display: flex; align-items: center; justify-content: center; color: var(--steam); text-align: center; padding: 20px;">
+                        QR kod neni k dispozici.<br>Pouzijte rucni platbu.
+                    </div>
+                `;
+            }
+
+            qrModal.classList.add('visible');
+        };
+
+        // Close QR modal
+        function closeModal() {
+            qrModal.classList.remove('visible');
+            currentShareId = null;
+        }
+
+        closeQrModal.addEventListener('click', closeModal);
+        qrModal.addEventListener('click', (e) => {
+            if (e.target === qrModal) closeModal();
+        });
+
+        // Mark payment as paid
+        markPaidBtn.addEventListener('click', async () => {
+            if (!currentShareId) return;
+
+            markPaidBtn.disabled = true;
+            markPaidBtn.classList.add('btn-loading');
+
+            try {
+                await api.purchases.markPaid(currentShareId);
+                showToast('Platba oznacena jako zaplacena', 'success');
+                closeModal();
+
+                // Reload data
+                loadOutstandingPayments();
+                loadPaidPayments();
+
+            } catch (error) {
+                console.error('Failed to mark as paid:', error);
+                showToast(error.data?.error || 'Nepodarilo se oznacit platbu', 'error');
+            } finally {
+                markPaidBtn.disabled = false;
+                markPaidBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // Load outstanding payments
+        async function loadOutstandingPayments() {
+            try {
+                const response = await api.purchases.getOutstanding();
+                outstandingPayments = response.shares || [];
+
+                renderOutstandingSummary(outstandingPayments);
+                renderOutstandingPayments(outstandingPayments);
+
+            } catch (error) {
+                console.error('Failed to load outstanding payments:', error);
+                outstandingList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3 class="empty-state-title">Chyba</h3>
+                        <p class="empty-state-text">Nepodarilo se nacist platby</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load my purchases
+        async function loadMyPurchases() {
+            try {
+                const response = await api.purchases.list();
+                const purchases = response.results || response || [];
+
+                // Filter purchases made by current user
+                const user = AuthStore.getUser();
+                myPurchases = purchases.filter(p => p.bought_by?.id === user?.id);
+
+                renderMyPurchases(myPurchases);
+
+            } catch (error) {
+                console.error('Failed to load purchases:', error);
+                myPurchasesList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3 class="empty-state-title">Chyba</h3>
+                        <p class="empty-state-text">Nepodarilo se nacist nakupy</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load paid payments (history)
+        async function loadPaidPayments() {
+            try {
+                const response = await api.purchases.getShares({ status: 'paid' });
+                paidPayments = response.results || response || [];
+
+                renderHistory(paidPayments);
+
+            } catch (error) {
+                console.error('Failed to load payment history:', error);
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <h3 class="empty-state-title">Chyba</h3>
+                        <p class="empty-state-text">Nepodarilo se nacist historii</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Initialize
+        loadOutstandingPayments();
+        loadMyPurchases();
+        loadPaidPayments();
+    </script>
+</body>
+</html>

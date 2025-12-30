@@ -57,6 +57,9 @@ urlpatterns = [
     path('library/', serve_frontend, {'page': 'library'}, name='library'),
     path('beans/', serve_frontend, {'page': 'beans'}, name='beans'),
     path('beans/<uuid:bean_id>/', serve_frontend, {'page': 'bean_detail'}, name='bean-detail'),
+    path('reviews/create/', serve_frontend, {'page': 'reviews/create'}, name='review-create'),
+    path('profile/', serve_frontend, {'page': 'profile'}, name='profile'),
+    path('purchases/', serve_frontend, {'page': 'purchases'}, name='purchases'),
 ]
 
 # Media files (development only)

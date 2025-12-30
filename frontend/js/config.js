@@ -44,6 +44,8 @@ const Config = {
         LIST: '/purchases/',
         MY_OUTSTANDING: '/purchases/my_outstanding/',
         DETAIL: (id) => `/purchases/${id}/`,
+        SHARES: '/purchases/shares/',
+        MARK_PAID: (shareId) => `/purchases/shares/${shareId}/mark_paid/`,
     },
 
     // Analytics endpoints
@@ -93,7 +95,10 @@ const Config = {
         BEAN_DETAIL: (id) => `/beans/${id}/`,
 
         // Purchases
-        PURCHASES: '/purchases',
+        PURCHASES: '/purchases/',
+
+        // Profile
+        PROFILE: '/profile/',
     },
 
     // Token refresh threshold (refresh when less than 5 minutes remaining)

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Profil - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/profile.css">
+</head>
+<body class="profile-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Profil</h1>
+        </header>
+
+        <!-- Loading State -->
+        <div id="loadingState">
+            <div class="skeleton profile-skeleton"></div>
+        </div>
+
+        <!-- Profile Content -->
+        <div id="profileContent" style="display: none;">
+            <!-- Profile Hero -->
+            <div class="profile-hero">
+                <div class="profile-avatar" id="profileAvatar">☕</div>
+                <div class="profile-name" id="profileName">-</div>
+                <div class="profile-email" id="profileEmail">-</div>
+                <div class="profile-joined" id="profileJoined">-</div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statReviews">-</div>
+                    <div class="stat-label">Hodnoceni</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statLibrary">-</div>
+                    <div class="stat-label">V knihovne</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statGroups">-</div>
+                    <div class="stat-label">Skupiny</div>
+                </div>
+            </div>
+
+            <!-- Edit Profile -->
+            <div class="section-card">
+                <h3 class="section-title">Upravit profil</h3>
+                <form id="profileForm">
+                    <div class="form-message" id="formMessage"></div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="emailInput" disabled>
+                        <div class="form-hint">Email nelze zmenit</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zobrazovane jmeno</label>
+                        <input type="text" class="form-input" id="displayNameInput" placeholder="Vase jmeno">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" id="saveBtn">
+                            <span class="btn-text">Ulozit zmeny</span>
+                            <span class="spinner"></span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="section-card">
+                <h3 class="section-title">Rychle odkazy</h3>
+                <div class="menu-list">
+                    <a href="/library/" class="menu-item">
+                        <div class="menu-item-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                            </svg>
+                        </div>
+                        <div class="menu-item-content">
+                            <div class="menu-item-title">Moje knihovna</div>
+                            <div class="menu-item-subtitle">Spravujte sve kavy</div>
+                        </div>
+                        <div class="menu-item-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="/groups/list/" class="menu-item">
+                        <div class="menu-item-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div class="menu-item-content">
+                            <div class="menu-item-title">Moje skupiny</div>
+                            <div class="menu-item-subtitle">Prohlizejte skupiny</div>
+                        </div>
+                        <div class="menu-item-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </div>
+                    </a>
+                    <a href="/beans/" class="menu-item">
+                        <div class="menu-item-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                        </div>
+                        <div class="menu-item-content">
+                            <div class="menu-item-title">Prozkoumat kavy</div>
+                            <div class="menu-item-subtitle">Objevte nove kavy</div>
+                        </div>
+                        <div class="menu-item-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18l6-6-6-6"/>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Logout -->
+            <div class="logout-section">
+                <button class="btn btn-danger" id="logoutBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16 17 21 12 16 7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Odhlasit se
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // DOM Elements
+        const loadingState = document.getElementById('loadingState');
+        const profileContent = document.getElementById('profileContent');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        const profileJoined = document.getElementById('profileJoined');
+        const statReviews = document.getElementById('statReviews');
+        const statLibrary = document.getElementById('statLibrary');
+        const statGroups = document.getElementById('statGroups');
+        const profileForm = document.getElementById('profileForm');
+        const emailInput = document.getElementById('emailInput');
+        const displayNameInput = document.getElementById('displayNameInput');
+        const formMessage = document.getElementById('formMessage');
+        const saveBtn = document.getElementById('saveBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const toast = document.getElementById('toast');
+
+        // State
+        let user = null;
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Format date
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('cs-CZ', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+        }
+
+        // Get initials for avatar
+        function getInitials(name, email) {
+            if (name) {
+                const parts = name.split(' ');
+                if (parts.length >= 2) {
+                    return parts[0][0] + parts[1][0];
+                }
+                return name.substring(0, 2).toUpperCase();
+            }
+            return email ? email[0].toUpperCase() : '?';
+        }
+
+        // Load profile data
+        async function loadProfile() {
+            try {
+                // Get user from store first
+                user = AuthStore.getUser();
+
+                if (user) {
+                    renderProfile(user);
+                }
+
+                // Fetch fresh data from API
+                const freshUser = await api.auth.getCurrentUser();
+                user = freshUser;
+                AuthStore.setUser(freshUser);
+                renderProfile(freshUser);
+
+                // Load stats in parallel
+                loadStats();
+
+                loadingState.style.display = 'none';
+                profileContent.style.display = 'block';
+
+            } catch (error) {
+                console.error('Failed to load profile:', error);
+
+                if (error instanceof ApiError && error.status === 401) {
+                    AuthStore.logout();
+                    window.location.href = Config.ROUTES.LOGIN;
+                    return;
+                }
+
+                // Use cached user if API fails
+                user = AuthStore.getUser();
+                if (user) {
+                    renderProfile(user);
+                    loadingState.style.display = 'none';
+                    profileContent.style.display = 'block';
+                }
+            }
+        }
+
+        // Render profile data
+        function renderProfile(userData) {
+            const displayName = userData.display_name || 'Uzivatel';
+            profileAvatar.textContent = getInitials(userData.display_name, userData.email);
+            profileName.textContent = displayName;
+            profileEmail.textContent = userData.email;
+            profileJoined.textContent = userData.created_at
+                ? `Clenstvi od ${formatDate(userData.created_at)}`
+                : '';
+
+            emailInput.value = userData.email;
+            displayNameInput.value = userData.display_name || '';
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                // Load all stats in parallel
+                const [reviewsCount, libraryResponse, groupsResponse] = await Promise.all([
+                    api.reviews.getMyReviewsCount().catch(() => 0),
+                    api.reviews.getLibrary().catch(() => ({ results: [] })),
+                    api.groups.getMyGroups().catch(() => [])
+                ]);
+
+                statReviews.textContent = reviewsCount;
+
+                const libraryItems = libraryResponse.results || libraryResponse || [];
+                statLibrary.textContent = libraryItems.length;
+
+                const groups = Array.isArray(groupsResponse) ? groupsResponse : (groupsResponse.results || []);
+                statGroups.textContent = groups.length;
+
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Save profile changes
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            formMessage.classList.remove('visible');
+
+            const newDisplayName = displayNameInput.value.trim();
+
+            saveBtn.disabled = true;
+            saveBtn.classList.add('btn-loading');
+
+            try {
+                const updatedUser = await api.auth.updateProfile({
+                    display_name: newDisplayName || null
+                });
+
+                user = updatedUser;
+                renderProfile(updatedUser);
+
+                formMessage.textContent = 'Zmeny byly ulozeny';
+                formMessage.className = 'form-message visible success';
+
+            } catch (error) {
+                console.error('Failed to save profile:', error);
+                formMessage.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se ulozit zmeny';
+                formMessage.className = 'form-message visible error';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // Logout
+        logoutBtn.addEventListener('click', async () => {
+            logoutBtn.disabled = true;
+
+            try {
+                await api.auth.logout();
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                AuthStore.logout();
+                window.location.href = Config.ROUTES.LOGIN;
+            }
+        });
+
+        // Initialize
+        loadProfile();
+    </script>
+</body>
+</html>
