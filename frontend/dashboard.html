@@ -325,14 +325,167 @@
         </section>
     </div>
 
+    <!-- Add Bean Modal -->
+    <div class="modal-overlay" id="addBeanModal">
+        <div class="modal">
+            <h3 class="modal-title">Pridat kavu do katalogu</h3>
+            <form id="addBeanForm">
+                <!-- Search existing bean section -->
+                <div id="searchBeanSection">
+                    <div class="form-group">
+                        <label class="form-label">Vyhledat existujici kavu</label>
+                        <div class="search-wrapper">
+                            <input type="text" class="form-input" id="beanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
+                            <div class="search-results" id="beanSearchResults"></div>
+                        </div>
+                        <input type="hidden" id="selectedBeanId">
+                        <div class="selected-item" id="selectedBeanDisplay" style="display: none;">
+                            <div class="selected-item-icon">☕</div>
+                            <div class="selected-item-info">
+                                <div class="selected-item-name" id="selectedBeanName"></div>
+                                <div class="selected-item-meta" id="selectedBeanMeta"></div>
+                            </div>
+                            <button type="button" class="selected-item-remove" id="removeBeanBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin: 16px 0;">
+                        <span style="color: var(--steam); font-size: 0.875rem;">Kava neni v katalogu?</span>
+                        <button type="button" id="showCreateBeanBtn" style="background: none; border: none; color: #A47449; font-weight: 500; cursor: pointer; font-size: 0.875rem; text-decoration: underline;">Vytvorit novou</button>
+                    </div>
+                </div>
+
+                <!-- Create new bean section (hidden by default) -->
+                <div id="createBeanSection" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <button type="button" id="backToSearchBtn" style="background: none; border: none; color: var(--steam); cursor: pointer; font-size: 0.875rem;">
+                            ← Zpet na vyhledavani
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nazev kavy *</label>
+                        <input type="text" class="form-input" id="newBeanName" placeholder="Napr. Ethiopia Yirgacheffe">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prazirna *</label>
+                        <input type="text" class="form-input" id="newBeanRoastery" placeholder="Napr. Doubleshot">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zeme puvodu <span class="optional">(volitelne)</span></label>
+                        <input type="text" class="form-input" id="newBeanOrigin" placeholder="Napr. Etiopie">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Profil prazeni</label>
+                            <select class="form-select" id="newBeanRoast">
+                                <option value="medium">Stredni</option>
+                                <option value="light">Svetly</option>
+                                <option value="medium_light">Stredne svetly</option>
+                                <option value="medium_dark">Stredne tmavy</option>
+                                <option value="dark">Tmavy</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Zpracovani</label>
+                            <select class="form-select" id="newBeanProcessing">
+                                <option value="washed">Prane (Washed)</option>
+                                <option value="natural">Natural</option>
+                                <option value="honey">Honey</option>
+                                <option value="anaerobic">Anaerobni</option>
+                                <option value="other">Jine</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-error" id="addBeanError"></div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAddBeanBtn">Zrusit</button>
+                    <button type="submit" class="btn btn-primary" id="submitAddBeanBtn" disabled>
+                        <span class="btn-text">Pridat</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- FAB Overlay -->
     <div class="fab-overlay" id="fabOverlay"></div>
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
-        <a href="/beans/" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></a>
-        <a href="/library/" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></a>
+        <button type="button" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></button>
+        <button type="button" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></button>
         <a href="#" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
+    </div>
+
+    <!-- Add Review Modal -->
+    <div class="modal-overlay" id="addReviewModal">
+        <div class="modal">
+            <h3 class="modal-title">Vyberte kavu k hodnoceni</h3>
+
+            <!-- Search existing bean section -->
+            <div id="reviewSearchBeanSection">
+                <div class="form-group">
+                    <label class="form-label">Vyhledat kavu</label>
+                    <div class="search-wrapper">
+                        <input type="text" class="form-input" id="reviewBeanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
+                        <div class="search-results" id="reviewBeanSearchResults"></div>
+                    </div>
+                    <input type="hidden" id="reviewSelectedBeanId">
+                    <div class="selected-item" id="reviewSelectedBeanDisplay" style="display: none;">
+                        <div class="selected-item-icon">☕</div>
+                        <div class="selected-item-info">
+                            <div class="selected-item-name" id="reviewSelectedBeanName"></div>
+                            <div class="selected-item-meta" id="reviewSelectedBeanMeta"></div>
+                        </div>
+                        <button type="button" class="selected-item-remove" id="reviewRemoveBeanBtn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div style="text-align: center; margin: 16px 0;">
+                    <span style="color: var(--steam); font-size: 0.875rem;">Kava neni v katalogu?</span>
+                    <button type="button" id="reviewShowCreateBeanBtn" style="background: none; border: none; color: #A47449; font-weight: 500; cursor: pointer; font-size: 0.875rem; text-decoration: underline;">Pridat novou</button>
+                </div>
+            </div>
+
+            <!-- Create new bean section (hidden by default) -->
+            <div id="reviewCreateBeanSection" style="display: none;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <button type="button" id="reviewBackToSearchBtn" style="background: none; border: none; color: var(--steam); cursor: pointer; font-size: 0.875rem;">
+                        ← Zpet na vyhledavani
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nazev kavy *</label>
+                    <input type="text" class="form-input" id="reviewNewBeanName" placeholder="Napr. Ethiopia Yirgacheffe">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Prazirna *</label>
+                    <input type="text" class="form-input" id="reviewNewBeanRoastery" placeholder="Napr. Doubleshot">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Zeme puvodu <span class="optional">(volitelne)</span></label>
+                    <input type="text" class="form-input" id="reviewNewBeanOrigin" placeholder="Napr. Etiopie">
+                </div>
+            </div>
+
+            <div class="form-error" id="addReviewError"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelAddReviewBtn">Zrusit</button>
+                <button type="button" class="btn btn-primary" id="continueToReviewBtn" disabled>
+                    <span class="btn-text">Pokracovat</span>
+                    <span class="spinner"></span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Bottom Navigation -->
@@ -617,13 +770,6 @@
         fabBtn.addEventListener('click', toggleFab);
         fabOverlay.addEventListener('click', toggleFab);
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                if (fabOpen) toggleFab();
-                if (dropdownOpen) closeDropdown();
-            }
-        });
-
         // FAB menu item handlers
         const fabAddPurchase = document.getElementById('fabAddPurchase');
         let userGroups = [];
@@ -675,6 +821,420 @@
 
             groupsList.innerHTML = html;
         }
+
+        // === ADD BEAN MODAL ===
+        const addBeanModal = document.getElementById('addBeanModal');
+        const addBeanForm = document.getElementById('addBeanForm');
+        const beanSearchInput = document.getElementById('beanSearchInput');
+        const beanSearchResults = document.getElementById('beanSearchResults');
+        const selectedBeanId = document.getElementById('selectedBeanId');
+        const selectedBeanDisplay = document.getElementById('selectedBeanDisplay');
+        const selectedBeanName = document.getElementById('selectedBeanName');
+        const selectedBeanMeta = document.getElementById('selectedBeanMeta');
+        const removeBeanBtn = document.getElementById('removeBeanBtn');
+        const cancelAddBeanBtn = document.getElementById('cancelAddBeanBtn');
+        const submitAddBeanBtn = document.getElementById('submitAddBeanBtn');
+        const addBeanError = document.getElementById('addBeanError');
+        const fabAddBean = document.getElementById('fabAddBean');
+
+        // Create new bean elements
+        const searchBeanSection = document.getElementById('searchBeanSection');
+        const createBeanSection = document.getElementById('createBeanSection');
+        const showCreateBeanBtn = document.getElementById('showCreateBeanBtn');
+        const backToSearchBtn = document.getElementById('backToSearchBtn');
+        const newBeanName = document.getElementById('newBeanName');
+        const newBeanRoastery = document.getElementById('newBeanRoastery');
+        const newBeanOrigin = document.getElementById('newBeanOrigin');
+        const newBeanRoast = document.getElementById('newBeanRoast');
+        const newBeanProcessing = document.getElementById('newBeanProcessing');
+
+        let beanSearchTimeout;
+        let isCreateMode = false;
+
+        // Open add bean modal from FAB
+        fabAddBean.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleFab(); // Close FAB menu
+            openAddBeanModal();
+        });
+
+        function openAddBeanModal() {
+            addBeanModal.classList.add('visible');
+            resetAddBeanModal();
+            beanSearchInput.focus();
+        }
+
+        // Reset modal to initial state
+        function resetAddBeanModal() {
+            isCreateMode = false;
+            searchBeanSection.style.display = 'block';
+            createBeanSection.style.display = 'none';
+            beanSearchInput.value = '';
+            selectedBeanId.value = '';
+            selectedBeanDisplay.style.display = 'none';
+            beanSearchInput.style.display = 'block';
+            beanSearchResults.classList.remove('visible');
+            addBeanError.classList.remove('visible');
+            submitAddBeanBtn.disabled = true;
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Pridat';
+            // Reset create form fields
+            newBeanName.value = '';
+            newBeanRoastery.value = '';
+            newBeanOrigin.value = '';
+            newBeanRoast.value = 'medium';
+            newBeanProcessing.value = 'washed';
+        }
+
+        // Close add bean modal
+        function closeAddBeanModal() {
+            addBeanModal.classList.remove('visible');
+        }
+
+        cancelAddBeanBtn.addEventListener('click', closeAddBeanModal);
+        addBeanModal.addEventListener('click', (e) => {
+            if (e.target === addBeanModal) closeAddBeanModal();
+        });
+
+        // Toggle to create mode
+        showCreateBeanBtn.addEventListener('click', () => {
+            isCreateMode = true;
+            searchBeanSection.style.display = 'none';
+            createBeanSection.style.display = 'block';
+            submitAddBeanBtn.disabled = false;
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Vytvorit';
+            newBeanName.focus();
+        });
+
+        // Toggle back to search mode
+        backToSearchBtn.addEventListener('click', () => {
+            isCreateMode = false;
+            searchBeanSection.style.display = 'block';
+            createBeanSection.style.display = 'none';
+            submitAddBeanBtn.disabled = !selectedBeanId.value;
+            submitAddBeanBtn.querySelector('.btn-text').textContent = 'Pridat';
+            beanSearchInput.focus();
+        });
+
+        // Search beans
+        beanSearchInput.addEventListener('input', (e) => {
+            clearTimeout(beanSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                beanSearchResults.classList.remove('visible');
+                return;
+            }
+
+            beanSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await api.beans.list({ search: query });
+                    const beans = response.results || response;
+
+                    if (beans.length === 0) {
+                        beanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky - zkuste vytvorit novou kavu</div>';
+                    } else {
+                        beanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
+                            <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
+                                <div class="search-result-name">${escapeHtml(bean.name)}</div>
+                                <div class="search-result-meta">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                        `).join('');
+                    }
+                    beanSearchResults.classList.add('visible');
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Select bean from search results
+        beanSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                selectedBeanId.value = item.dataset.id;
+                selectedBeanName.textContent = item.dataset.name;
+                selectedBeanMeta.textContent = item.dataset.roastery || 'Neznama prazirna';
+                selectedBeanDisplay.style.display = 'flex';
+                beanSearchInput.style.display = 'none';
+                beanSearchResults.classList.remove('visible');
+                submitAddBeanBtn.disabled = false;
+            }
+        });
+
+        // Remove selected bean
+        removeBeanBtn.addEventListener('click', () => {
+            selectedBeanId.value = '';
+            selectedBeanDisplay.style.display = 'none';
+            beanSearchInput.style.display = 'block';
+            beanSearchInput.value = '';
+            submitAddBeanBtn.disabled = true;
+            beanSearchInput.focus();
+        });
+
+        // Submit add bean form
+        addBeanForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            addBeanError.classList.remove('visible');
+
+            submitAddBeanBtn.disabled = true;
+            submitAddBeanBtn.classList.add('btn-loading');
+
+            try {
+                let beanId;
+
+                if (isCreateMode) {
+                    // Validate create form
+                    const name = newBeanName.value.trim();
+                    const roastery = newBeanRoastery.value.trim();
+
+                    if (!name) {
+                        throw { data: { error: 'Zadejte nazev kavy' } };
+                    }
+                    if (!roastery) {
+                        throw { data: { error: 'Zadejte nazev prazirny' } };
+                    }
+
+                    // Create new bean
+                    const newBean = await api.beans.create({
+                        name: name,
+                        roastery_name: roastery,
+                        origin_country: newBeanOrigin.value.trim() || undefined,
+                        roast_profile: newBeanRoast.value,
+                        processing: newBeanProcessing.value
+                    });
+                    beanId = newBean.id;
+
+                    // Navigate to the new bean's detail page
+                    closeAddBeanModal();
+                    window.location.href = `/beans/${beanId}/`;
+                } else {
+                    // Use selected existing bean - navigate to its detail page
+                    beanId = selectedBeanId.value;
+                    if (!beanId) {
+                        throw { data: { error: 'Vyberte kavu' } };
+                    }
+                    closeAddBeanModal();
+                    window.location.href = `/beans/${beanId}/`;
+                }
+
+            } catch (error) {
+                console.error('Failed to add bean:', error);
+                addBeanError.textContent = error.data?.error || error.data?.detail || error.data?.name?.[0] || 'Nepodarilo se pridat kavu';
+                addBeanError.classList.add('visible');
+                submitAddBeanBtn.disabled = false;
+            } finally {
+                submitAddBeanBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // === ADD REVIEW MODAL (Bean Picker) ===
+        const addReviewModal = document.getElementById('addReviewModal');
+        const reviewBeanSearchInput = document.getElementById('reviewBeanSearchInput');
+        const reviewBeanSearchResults = document.getElementById('reviewBeanSearchResults');
+        const reviewSelectedBeanId = document.getElementById('reviewSelectedBeanId');
+        const reviewSelectedBeanDisplay = document.getElementById('reviewSelectedBeanDisplay');
+        const reviewSelectedBeanName = document.getElementById('reviewSelectedBeanName');
+        const reviewSelectedBeanMeta = document.getElementById('reviewSelectedBeanMeta');
+        const reviewRemoveBeanBtn = document.getElementById('reviewRemoveBeanBtn');
+        const cancelAddReviewBtn = document.getElementById('cancelAddReviewBtn');
+        const continueToReviewBtn = document.getElementById('continueToReviewBtn');
+        const addReviewError = document.getElementById('addReviewError');
+        const fabAddReview = document.getElementById('fabAddReview');
+
+        // Create bean section elements
+        const reviewSearchBeanSection = document.getElementById('reviewSearchBeanSection');
+        const reviewCreateBeanSection = document.getElementById('reviewCreateBeanSection');
+        const reviewShowCreateBeanBtn = document.getElementById('reviewShowCreateBeanBtn');
+        const reviewBackToSearchBtn = document.getElementById('reviewBackToSearchBtn');
+        const reviewNewBeanName = document.getElementById('reviewNewBeanName');
+        const reviewNewBeanRoastery = document.getElementById('reviewNewBeanRoastery');
+        const reviewNewBeanOrigin = document.getElementById('reviewNewBeanOrigin');
+
+        let reviewBeanSearchTimeout;
+        let reviewIsCreateMode = false;
+
+        // Open review modal from FAB
+        fabAddReview.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleFab();
+            openAddReviewModal();
+        });
+
+        function openAddReviewModal() {
+            addReviewModal.classList.add('visible');
+            resetAddReviewModal();
+            reviewBeanSearchInput.focus();
+        }
+
+        // Reset review modal to initial state
+        function resetAddReviewModal() {
+            reviewIsCreateMode = false;
+            reviewSearchBeanSection.style.display = 'block';
+            reviewCreateBeanSection.style.display = 'none';
+            reviewBeanSearchInput.value = '';
+            reviewSelectedBeanId.value = '';
+            reviewSelectedBeanDisplay.style.display = 'none';
+            reviewBeanSearchInput.style.display = 'block';
+            reviewBeanSearchResults.classList.remove('visible');
+            addReviewError.classList.remove('visible');
+            continueToReviewBtn.disabled = true;
+            continueToReviewBtn.querySelector('.btn-text').textContent = 'Pokracovat';
+            // Reset create form
+            reviewNewBeanName.value = '';
+            reviewNewBeanRoastery.value = '';
+            reviewNewBeanOrigin.value = '';
+        }
+
+        // Close review modal
+        function closeAddReviewModal() {
+            addReviewModal.classList.remove('visible');
+        }
+
+        cancelAddReviewBtn.addEventListener('click', closeAddReviewModal);
+        addReviewModal.addEventListener('click', (e) => {
+            if (e.target === addReviewModal) closeAddReviewModal();
+        });
+
+        // Toggle to create mode
+        reviewShowCreateBeanBtn.addEventListener('click', () => {
+            reviewIsCreateMode = true;
+            reviewSearchBeanSection.style.display = 'none';
+            reviewCreateBeanSection.style.display = 'block';
+            continueToReviewBtn.disabled = false;
+            continueToReviewBtn.querySelector('.btn-text').textContent = 'Vytvorit a pokracovat';
+            reviewNewBeanName.focus();
+        });
+
+        // Toggle back to search mode
+        reviewBackToSearchBtn.addEventListener('click', () => {
+            reviewIsCreateMode = false;
+            reviewSearchBeanSection.style.display = 'block';
+            reviewCreateBeanSection.style.display = 'none';
+            continueToReviewBtn.disabled = !reviewSelectedBeanId.value;
+            continueToReviewBtn.querySelector('.btn-text').textContent = 'Pokracovat';
+            reviewBeanSearchInput.focus();
+        });
+
+        // Search beans for review
+        reviewBeanSearchInput.addEventListener('input', (e) => {
+            clearTimeout(reviewBeanSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                reviewBeanSearchResults.classList.remove('visible');
+                return;
+            }
+
+            reviewBeanSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await api.beans.list({ search: query });
+                    const beans = response.results || response;
+
+                    if (beans.length === 0) {
+                        reviewBeanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky - zkuste pridat novou kavu</div>';
+                    } else {
+                        reviewBeanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
+                            <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
+                                <div class="search-result-name">${escapeHtml(bean.name)}</div>
+                                <div class="search-result-meta">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                        `).join('');
+                    }
+                    reviewBeanSearchResults.classList.add('visible');
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Select bean from search results
+        reviewBeanSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                reviewSelectedBeanId.value = item.dataset.id;
+                reviewSelectedBeanName.textContent = item.dataset.name;
+                reviewSelectedBeanMeta.textContent = item.dataset.roastery || 'Neznama prazirna';
+                reviewSelectedBeanDisplay.style.display = 'flex';
+                reviewBeanSearchInput.style.display = 'none';
+                reviewBeanSearchResults.classList.remove('visible');
+                continueToReviewBtn.disabled = false;
+            }
+        });
+
+        // Remove selected bean
+        reviewRemoveBeanBtn.addEventListener('click', () => {
+            reviewSelectedBeanId.value = '';
+            reviewSelectedBeanDisplay.style.display = 'none';
+            reviewBeanSearchInput.style.display = 'block';
+            reviewBeanSearchInput.value = '';
+            continueToReviewBtn.disabled = true;
+            reviewBeanSearchInput.focus();
+        });
+
+        // Continue to review form
+        continueToReviewBtn.addEventListener('click', async () => {
+            addReviewError.classList.remove('visible');
+
+            continueToReviewBtn.disabled = true;
+            continueToReviewBtn.classList.add('btn-loading');
+
+            try {
+                let beanId;
+
+                if (reviewIsCreateMode) {
+                    // Validate and create new bean
+                    const name = reviewNewBeanName.value.trim();
+                    const roastery = reviewNewBeanRoastery.value.trim();
+
+                    if (!name) {
+                        throw { data: { error: 'Zadejte nazev kavy' } };
+                    }
+                    if (!roastery) {
+                        throw { data: { error: 'Zadejte nazev prazirny' } };
+                    }
+
+                    const newBean = await api.beans.create({
+                        name: name,
+                        roastery_name: roastery,
+                        origin_country: reviewNewBeanOrigin.value.trim() || undefined
+                    });
+                    beanId = newBean.id;
+                } else {
+                    beanId = reviewSelectedBeanId.value;
+                    if (!beanId) {
+                        throw { data: { error: 'Vyberte kavu' } };
+                    }
+                }
+
+                // Redirect to full review form
+                closeAddReviewModal();
+                window.location.href = `/reviews/create/?bean=${beanId}`;
+
+            } catch (error) {
+                console.error('Error:', error);
+                addReviewError.textContent = error.data?.error || error.data?.detail || 'Nastala chyba';
+                addReviewError.classList.add('visible');
+                continueToReviewBtn.disabled = false;
+            } finally {
+                continueToReviewBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // Update Escape handler to also close modals
+        document.removeEventListener('keydown', document.escapeHandler);
+        document.escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                if (addReviewModal.classList.contains('visible')) {
+                    closeAddReviewModal();
+                } else if (addBeanModal.classList.contains('visible')) {
+                    closeAddBeanModal();
+                } else if (fabOpen) {
+                    toggleFab();
+                }
+                if (dropdownOpen) closeDropdown();
+            }
+        };
+        document.addEventListener('keydown', document.escapeHandler);
 
         // Initialize
         updateGreeting();
