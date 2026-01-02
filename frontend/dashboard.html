@@ -420,7 +420,7 @@
     <div class="fab-menu" id="fabMenu">
         <button type="button" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></button>
         <button type="button" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></button>
-        <a href="#" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
+        <a href="/purchases/create/" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 
     <!-- Add Review Modal -->
@@ -770,27 +770,10 @@
         fabBtn.addEventListener('click', toggleFab);
         fabOverlay.addEventListener('click', toggleFab);
 
-        // FAB menu item handlers
-        const fabAddPurchase = document.getElementById('fabAddPurchase');
-        let userGroups = [];
+        // FAB menu item handlers - fabAddPurchase now uses direct link
 
-        fabAddPurchase.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleFab();
-
-            if (userGroups.length > 0) {
-                // Go to first group to add purchase
-                window.location.href = `/groups/${userGroups[0].id}/`;
-            } else {
-                // No groups - redirect to create group
-                alert('Pro zaznamenani nakupu musite byt clenem skupiny. Vytvorte nebo se pripojte ke skupine.');
-                window.location.href = Config.ROUTES.GROUP_CREATE;
-            }
-        });
-
-        // Store groups when loaded
+        // Render groups
         function renderGroups(groups) {
-            userGroups = groups; // Store for FAB purchase button
             const groupsList = document.getElementById('groupsList');
             let html = '';
 
