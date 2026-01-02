@@ -49,6 +49,23 @@
     color: var(--espresso);
 }
 
+.header-action-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--espresso);
+    border-radius: var(--radius-full);
+    color: var(--porcelain);
+    text-decoration: none;
+    transition: all var(--transition-base);
+}
+
+.header-action-btn:hover {
+    background: var(--espresso-light);
+}
+
 /* Outstanding Summary Card */
 .outstanding-card {
     background: linear-gradient(135deg, #A47449, #8B5A2B);
