@@ -96,6 +96,7 @@ const Config = {
 
         // Purchases
         PURCHASES: '/purchases/',
+        PURCHASE_CREATE: '/purchases/create/',
 
         // Profile
         PROFILE: '/profile/',

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2C1810">
+    <title>Novy nakup - Kavarna</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/static/css/variables.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/purchase-create.css">
+</head>
+<body class="purchase-create-page">
+    <div class="page-container">
+        <!-- Header -->
+        <header class="page-header">
+            <a href="/purchases/" class="back-btn" id="backBtn" aria-label="Zpet">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Novy nakup</h1>
+        </header>
+
+        <!-- Form -->
+        <form id="purchaseForm" class="purchase-form">
+            <!-- Bean Selection -->
+            <section class="form-section">
+                <h2 class="section-title">Kava</h2>
+
+                <div id="beanSearchSection">
+                    <div class="form-group">
+                        <label class="form-label">Vyhledat kavu</label>
+                        <div class="search-wrapper">
+                            <input type="text" class="form-input" id="beanSearchInput" placeholder="Nazev kavy..." autocomplete="off">
+                            <div class="search-results" id="beanSearchResults"></div>
+                        </div>
+                        <input type="hidden" id="selectedBeanId">
+                        <div class="selected-item" id="selectedBeanDisplay" style="display: none;">
+                            <div class="selected-item-icon">☕</div>
+                            <div class="selected-item-info">
+                                <div class="selected-item-name" id="selectedBeanName"></div>
+                                <div class="selected-item-meta" id="selectedBeanMeta"></div>
+                            </div>
+                            <button type="button" class="selected-item-remove" id="removeBeanBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M18 6L6 18M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="create-bean-link">
+                        <span>Kava neni v katalogu?</span>
+                        <button type="button" id="showCreateBeanBtn">Pridat novou</button>
+                    </div>
+                </div>
+
+                <!-- Create new bean (hidden by default) -->
+                <div id="createBeanSection" style="display: none;">
+                    <button type="button" id="backToSearchBtn" class="back-link">
+                        ← Zpet na vyhledavani
+                    </button>
+                    <div class="form-group">
+                        <label class="form-label">Nazev kavy *</label>
+                        <input type="text" class="form-input" id="newBeanName" placeholder="Napr. Ethiopia Yirgacheffe">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Prazirna *</label>
+                        <input type="text" class="form-input" id="newBeanRoastery" placeholder="Napr. Doubleshot">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zeme puvodu <span class="optional">(volitelne)</span></label>
+                        <input type="text" class="form-input" id="newBeanOrigin" placeholder="Napr. Etiopie">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Purchase Details -->
+            <section class="form-section">
+                <h2 class="section-title">Detaily nakupu</h2>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Cena (CZK) *</label>
+                        <input type="number" class="form-input" id="priceInput" placeholder="0" min="1" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Datum *</label>
+                        <input type="date" class="form-input" id="dateInput" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Hmotnost (g) <span class="optional">(volitelne)</span></label>
+                        <input type="number" class="form-input" id="weightInput" placeholder="250" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Misto nakupu <span class="optional">(volitelne)</span></label>
+                        <input type="text" class="form-input" id="locationInput" placeholder="Napr. E-shop">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Poznamka <span class="optional">(volitelne)</span></label>
+                    <textarea class="form-input form-textarea" id="noteInput" placeholder="Dalsi informace k nakupu..." rows="2"></textarea>
+                </div>
+            </section>
+
+            <!-- Purchase Type -->
+            <section class="form-section">
+                <h2 class="section-title">Typ nakupu</h2>
+
+                <div class="purchase-type-toggle">
+                    <button type="button" class="type-btn active" data-type="personal" id="typePersonal">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        <span>Osobni</span>
+                    </button>
+                    <button type="button" class="type-btn" data-type="group" id="typeGroup">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <span>Skupinovy</span>
+                    </button>
+                </div>
+
+                <!-- Personal purchase info -->
+                <div id="personalInfo" class="type-info">
+                    <p>Nakup bude zaznamenan jako vas osobni nakup.</p>
+                </div>
+
+                <!-- Group selection (hidden by default) -->
+                <div id="groupSection" class="type-info" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">Vyberte skupinu *</label>
+                        <select class="form-input form-select" id="groupSelect">
+                            <option value="">-- Vyberte skupinu --</option>
+                        </select>
+                    </div>
+
+                    <!-- Members list (shown after group selected) -->
+                    <div id="membersSection" style="display: none;">
+                        <div class="form-group">
+                            <div class="members-header">
+                                <label class="form-label">Kdo se sklada? *</label>
+                                <button type="button" id="selectAllMembers" class="select-all-btn">Vybrat vse</button>
+                            </div>
+                            <div class="members-list" id="membersList">
+                                <!-- Members will be loaded here -->
+                            </div>
+                            <div class="split-preview" id="splitPreview" style="display: none;">
+                                <span class="split-label">Castka na osobu:</span>
+                                <span class="split-amount" id="splitAmount">0 CZK</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error message -->
+            <div class="form-error" id="formError"></div>
+
+            <!-- Submit -->
+            <div class="submit-section">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <span class="btn-text">Ulozit nakup</span>
+                    <span class="spinner"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { api, ApiError } from '/static/js/api.js';
+        import AuthStore from '/static/js/auth.js';
+        import Config from '/static/js/config.js';
+
+        // Check authentication
+        if (!AuthStore.isAuthenticated()) {
+            window.location.href = Config.ROUTES.LOGIN;
+        }
+
+        // DOM Elements
+        const purchaseForm = document.getElementById('purchaseForm');
+        const beanSearchInput = document.getElementById('beanSearchInput');
+        const beanSearchResults = document.getElementById('beanSearchResults');
+        const selectedBeanId = document.getElementById('selectedBeanId');
+        const selectedBeanDisplay = document.getElementById('selectedBeanDisplay');
+        const selectedBeanName = document.getElementById('selectedBeanName');
+        const selectedBeanMeta = document.getElementById('selectedBeanMeta');
+        const removeBeanBtn = document.getElementById('removeBeanBtn');
+        const beanSearchSection = document.getElementById('beanSearchSection');
+        const createBeanSection = document.getElementById('createBeanSection');
+        const showCreateBeanBtn = document.getElementById('showCreateBeanBtn');
+        const backToSearchBtn = document.getElementById('backToSearchBtn');
+        const newBeanName = document.getElementById('newBeanName');
+        const newBeanRoastery = document.getElementById('newBeanRoastery');
+        const newBeanOrigin = document.getElementById('newBeanOrigin');
+
+        const priceInput = document.getElementById('priceInput');
+        const dateInput = document.getElementById('dateInput');
+        const weightInput = document.getElementById('weightInput');
+        const locationInput = document.getElementById('locationInput');
+        const noteInput = document.getElementById('noteInput');
+
+        const typePersonal = document.getElementById('typePersonal');
+        const typeGroup = document.getElementById('typeGroup');
+        const personalInfo = document.getElementById('personalInfo');
+        const groupSection = document.getElementById('groupSection');
+        const groupSelect = document.getElementById('groupSelect');
+        const membersSection = document.getElementById('membersSection');
+        const membersList = document.getElementById('membersList');
+        const selectAllMembers = document.getElementById('selectAllMembers');
+        const splitPreview = document.getElementById('splitPreview');
+        const splitAmount = document.getElementById('splitAmount');
+
+        const formError = document.getElementById('formError');
+        const submitBtn = document.getElementById('submitBtn');
+        const toast = document.getElementById('toast');
+
+        // State
+        let isCreateBeanMode = false;
+        let purchaseType = 'personal';
+        let userGroups = [];
+        let groupMembers = [];
+        let selectedMembers = new Set();
+        let beanSearchTimeout;
+
+        // Set default date to today
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            toast.textContent = message;
+            toast.className = 'toast visible ' + type;
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // === BEAN SEARCH ===
+        beanSearchInput.addEventListener('input', (e) => {
+            clearTimeout(beanSearchTimeout);
+            const query = e.target.value.trim();
+
+            if (query.length < 2) {
+                beanSearchResults.classList.remove('visible');
+                return;
+            }
+
+            beanSearchTimeout = setTimeout(async () => {
+                try {
+                    const response = await api.beans.list({ search: query });
+                    const beans = response.results || response;
+
+                    if (beans.length === 0) {
+                        beanSearchResults.innerHTML = '<div class="search-no-results">Zadne vysledky</div>';
+                    } else {
+                        beanSearchResults.innerHTML = beans.slice(0, 5).map(bean => `
+                            <div class="search-result-item" data-id="${bean.id}" data-name="${escapeHtml(bean.name)}" data-roastery="${escapeHtml(bean.roastery_name || '')}">
+                                <div class="search-result-name">${escapeHtml(bean.name)}</div>
+                                <div class="search-result-meta">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                            </div>
+                        `).join('');
+                    }
+                    beanSearchResults.classList.add('visible');
+                } catch (error) {
+                    console.error('Search error:', error);
+                }
+            }, 300);
+        });
+
+        // Select bean from search
+        beanSearchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (item) {
+                selectedBeanId.value = item.dataset.id;
+                selectedBeanName.textContent = item.dataset.name;
+                selectedBeanMeta.textContent = item.dataset.roastery || 'Neznama prazirna';
+                selectedBeanDisplay.style.display = 'flex';
+                beanSearchInput.style.display = 'none';
+                beanSearchResults.classList.remove('visible');
+            }
+        });
+
+        // Remove selected bean
+        removeBeanBtn.addEventListener('click', () => {
+            selectedBeanId.value = '';
+            selectedBeanDisplay.style.display = 'none';
+            beanSearchInput.style.display = 'block';
+            beanSearchInput.value = '';
+            beanSearchInput.focus();
+        });
+
+        // Toggle create bean mode
+        showCreateBeanBtn.addEventListener('click', () => {
+            isCreateBeanMode = true;
+            beanSearchSection.style.display = 'none';
+            createBeanSection.style.display = 'block';
+            newBeanName.focus();
+        });
+
+        backToSearchBtn.addEventListener('click', () => {
+            isCreateBeanMode = false;
+            beanSearchSection.style.display = 'block';
+            createBeanSection.style.display = 'none';
+            beanSearchInput.focus();
+        });
+
+        // === PURCHASE TYPE ===
+        typePersonal.addEventListener('click', () => {
+            purchaseType = 'personal';
+            typePersonal.classList.add('active');
+            typeGroup.classList.remove('active');
+            personalInfo.style.display = 'block';
+            groupSection.style.display = 'none';
+        });
+
+        typeGroup.addEventListener('click', async () => {
+            purchaseType = 'group';
+            typeGroup.classList.add('active');
+            typePersonal.classList.remove('active');
+            personalInfo.style.display = 'none';
+            groupSection.style.display = 'block';
+
+            // Load groups if not loaded
+            if (userGroups.length === 0) {
+                await loadUserGroups();
+            }
+        });
+
+        // Load user's groups
+        async function loadUserGroups() {
+            try {
+                const groups = await api.groups.getMyGroups();
+                userGroups = groups.results || groups;
+
+                groupSelect.innerHTML = '<option value="">-- Vyberte skupinu --</option>';
+                userGroups.forEach(group => {
+                    const option = document.createElement('option');
+                    option.value = group.id;
+                    option.textContent = group.name;
+                    groupSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load groups:', error);
+                showToast('Nepodarilo se nacist skupiny', 'error');
+            }
+        }
+
+        // Group selection change
+        groupSelect.addEventListener('change', async (e) => {
+            const groupId = e.target.value;
+            if (groupId) {
+                await loadGroupMembers(groupId);
+                membersSection.style.display = 'block';
+            } else {
+                membersSection.style.display = 'none';
+                groupMembers = [];
+                selectedMembers.clear();
+            }
+            updateSplitPreview();
+        });
+
+        // Load group members
+        async function loadGroupMembers(groupId) {
+            try {
+                const members = await api.groups.getMembers(groupId);
+                groupMembers = members.results || members;
+
+                // Select all members by default
+                selectedMembers.clear();
+                groupMembers.forEach(m => selectedMembers.add(m.user.id));
+
+                renderMembersList();
+                updateSplitPreview();
+            } catch (error) {
+                console.error('Failed to load members:', error);
+                showToast('Nepodarilo se nacist cleny skupiny', 'error');
+            }
+        }
+
+        // Render members list
+        function renderMembersList() {
+            membersList.innerHTML = groupMembers.map(member => {
+                const isSelected = selectedMembers.has(member.user.id);
+                return `
+                    <label class="member-item ${isSelected ? 'selected' : ''}" data-user-id="${member.user.id}">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''}>
+                        <div class="member-avatar">${(member.user.display_name || member.user.email)[0].toUpperCase()}</div>
+                        <div class="member-info">
+                            <div class="member-name">${escapeHtml(member.user.display_name || member.user.email)}</div>
+                            <div class="member-role">${member.role === 'owner' ? 'Vlastnik' : member.role === 'admin' ? 'Admin' : 'Clen'}</div>
+                        </div>
+                    </label>
+                `;
+            }).join('');
+
+            // Add click handlers
+            membersList.querySelectorAll('.member-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'INPUT') return; // Let checkbox handle itself
+                    const checkbox = item.querySelector('input');
+                    checkbox.checked = !checkbox.checked;
+                    toggleMember(item.dataset.userId, checkbox.checked);
+                });
+
+                item.querySelector('input').addEventListener('change', (e) => {
+                    toggleMember(item.dataset.userId, e.target.checked);
+                });
+            });
+        }
+
+        // Toggle member selection
+        function toggleMember(userId, isSelected) {
+            if (isSelected) {
+                selectedMembers.add(userId);
+            } else {
+                selectedMembers.delete(userId);
+            }
+
+            // Update visual state
+            const item = membersList.querySelector(`[data-user-id="${userId}"]`);
+            if (item) {
+                item.classList.toggle('selected', isSelected);
+            }
+
+            updateSplitPreview();
+        }
+
+        // Select all members
+        selectAllMembers.addEventListener('click', () => {
+            const allSelected = selectedMembers.size === groupMembers.length;
+
+            if (allSelected) {
+                // Deselect all
+                selectedMembers.clear();
+                selectAllMembers.textContent = 'Vybrat vse';
+            } else {
+                // Select all
+                groupMembers.forEach(m => selectedMembers.add(m.user.id));
+                selectAllMembers.textContent = 'Zrusit vyber';
+            }
+
+            renderMembersList();
+            updateSplitPreview();
+        });
+
+        // Update split preview
+        function updateSplitPreview() {
+            const price = parseFloat(priceInput.value) || 0;
+            const memberCount = selectedMembers.size;
+
+            if (purchaseType === 'group' && memberCount > 0 && price > 0) {
+                const perPerson = (price / memberCount).toFixed(2);
+                splitAmount.textContent = `${perPerson} CZK`;
+                splitPreview.style.display = 'flex';
+            } else {
+                splitPreview.style.display = 'none';
+            }
+        }
+
+        // Update split when price changes
+        priceInput.addEventListener('input', updateSplitPreview);
+
+        // === FORM SUBMISSION ===
+        purchaseForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            formError.classList.remove('visible');
+
+            // Validate
+            const price = parseFloat(priceInput.value);
+            if (!price || price <= 0) {
+                formError.textContent = 'Zadejte cenu nakupu';
+                formError.classList.add('visible');
+                return;
+            }
+
+            if (!dateInput.value) {
+                formError.textContent = 'Zadejte datum nakupu';
+                formError.classList.add('visible');
+                return;
+            }
+
+            if (purchaseType === 'group') {
+                if (!groupSelect.value) {
+                    formError.textContent = 'Vyberte skupinu';
+                    formError.classList.add('visible');
+                    return;
+                }
+                if (selectedMembers.size === 0) {
+                    formError.textContent = 'Vyberte alespon jednoho clena';
+                    formError.classList.add('visible');
+                    return;
+                }
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.classList.add('btn-loading');
+
+            try {
+                let beanId = selectedBeanId.value;
+
+                // Create new bean if in create mode
+                if (isCreateBeanMode) {
+                    const name = newBeanName.value.trim();
+                    const roastery = newBeanRoastery.value.trim();
+
+                    if (!name) {
+                        throw { data: { error: 'Zadejte nazev kavy' } };
+                    }
+                    if (!roastery) {
+                        throw { data: { error: 'Zadejte nazev prazirny' } };
+                    }
+
+                    const newBean = await api.beans.create({
+                        name: name,
+                        roastery_name: roastery,
+                        origin_country: newBeanOrigin.value.trim() || undefined
+                    });
+                    beanId = newBean.id;
+                }
+
+                // Build purchase data
+                const purchaseData = {
+                    total_price_czk: price,
+                    date: dateInput.value,
+                };
+
+                if (beanId) {
+                    purchaseData.coffeebean = beanId;
+                }
+
+                if (weightInput.value) {
+                    purchaseData.package_weight_grams = parseInt(weightInput.value);
+                }
+
+                if (locationInput.value.trim()) {
+                    purchaseData.purchase_location = locationInput.value.trim();
+                }
+
+                if (noteInput.value.trim()) {
+                    purchaseData.note = noteInput.value.trim();
+                }
+
+                if (purchaseType === 'group') {
+                    purchaseData.group = groupSelect.value;
+                    purchaseData.split_members = Array.from(selectedMembers);
+                }
+
+                // Create purchase
+                await api.purchases.create(purchaseData);
+
+                showToast('Nakup byl ulozen', 'success');
+
+                // Redirect to purchases page
+                setTimeout(() => {
+                    window.location.href = '/purchases/';
+                }, 1000);
+
+            } catch (error) {
+                console.error('Failed to create purchase:', error);
+                formError.textContent = error.data?.error || error.data?.detail || error.data?.total_price_czk?.[0] || 'Nepodarilo se ulozit nakup';
+                formError.classList.add('visible');
+                submitBtn.disabled = false;
+            } finally {
+                submitBtn.classList.remove('btn-loading');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -60,6 +60,7 @@ urlpatterns = [
     path('reviews/create/', serve_frontend, {'page': 'reviews/create'}, name='review-create'),
     path('profile/', serve_frontend, {'page': 'profile'}, name='profile'),
     path('purchases/', serve_frontend, {'page': 'purchases'}, name='purchases'),
+    path('purchases/create/', serve_frontend, {'page': 'purchases/create'}, name='purchase-create'),
 ]
 
 # Media files (development only)

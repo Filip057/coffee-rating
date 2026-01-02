@@ -19,6 +19,7 @@ def serve_frontend(request, page='login.html', **kwargs):
         'reviews/create': 'review_create.html',
         'profile': 'profile.html',
         'purchases': 'purchases.html',
+        'purchases/create': 'purchase_create.html',
     }
 
     # Get the actual filename
