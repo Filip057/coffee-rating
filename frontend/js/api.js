@@ -273,7 +273,7 @@ const api = {
          * @returns {Promise<Object>}
          */
         async addToLibrary(groupId, beanId) {
-            return request(Config.GROUPS.LIBRARY(groupId), {
+            return request(Config.GROUPS.ADD_TO_LIBRARY(groupId), {
                 method: 'POST',
                 body: JSON.stringify({ coffeebean_id: beanId }),
             });
@@ -327,7 +327,7 @@ const api = {
         async addToLibrary(beanId) {
             return request(Config.REVIEWS.ADD_TO_LIBRARY, {
                 method: 'POST',
-                body: JSON.stringify({ bean_id: beanId }),
+                body: JSON.stringify({ coffeebean_id: beanId }),
             });
         },
 

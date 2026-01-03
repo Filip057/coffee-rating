@@ -28,6 +28,7 @@ const Config = {
         JOIN_BY_CODE: '/groups/join-by-code/',
         LEAVE: (id) => `/groups/${id}/leave/`,
         LIBRARY: (id) => `/groups/${id}/library/`,
+        ADD_TO_LIBRARY: (id) => `/groups/${id}/add_to_library/`,
     },
 
     // Reviews/Library endpoints

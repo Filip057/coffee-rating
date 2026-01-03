@@ -311,13 +311,6 @@
                 pagination.style.display = 'none';
             }
 
-            // Attach add to library handlers
-            beansList.querySelectorAll('.add-to-library-btn:not(.added)').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    addToLibrary(btn.dataset.beanId, btn);
-                });
-            });
         }
 
         // Add bean to library
@@ -443,6 +436,15 @@
             });
             currentPage = 1;
             loadBeans();
+        });
+
+        // Add to library button - using event delegation for dynamic content
+        beansList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.add-to-library-btn');
+            if (btn && !btn.disabled && !btn.classList.contains('added')) {
+                e.stopPropagation();
+                addToLibrary(btn.dataset.beanId, btn);
+            }
         });
 
         // Search with debounce
