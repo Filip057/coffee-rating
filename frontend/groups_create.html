@@ -314,7 +314,7 @@
     <div class="page-container">
         <!-- Header -->
         <header class="page-header">
-            <a href="/dashboard" class="back-btn" aria-label="Zpet">
+            <a href="/groups/list/" class="back-btn" aria-label="Zpet">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -365,20 +365,6 @@
                         rows="3"
                         placeholder="Kratky popis skupiny"
                     ></textarea>
-                </div>
-
-                <!-- Soukromi -->
-                <div class="form-group">
-                    <div class="checkbox-wrapper" id="privateGroup" role="checkbox" aria-checked="true" tabindex="0">
-                        <div class="checkbox checked" aria-hidden="true">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        <span class="checkbox-label">
-                            Soukroma skupina (pristup pouze pres pozvanku)
-                        </span>
-                    </div>
                 </div>
 
                 <!-- Submit -->
@@ -464,24 +450,9 @@
         const createForm = document.getElementById('createGroupForm');
         const nameInput = document.getElementById('groupName');
         const descriptionInput = document.getElementById('groupDescription');
-        const privateCheckbox = document.getElementById('privateGroup');
         const createErrorBox = document.getElementById('createFormError');
         const nameError = document.getElementById('groupNameError');
         const createBtn = document.getElementById('createGroupBtn');
-
-        // Checkbox toggle
-        privateCheckbox.addEventListener('click', () => {
-            const box = privateCheckbox.querySelector('.checkbox');
-            const checked = box.classList.toggle('checked');
-            privateCheckbox.setAttribute('aria-checked', checked);
-        });
-
-        privateCheckbox.addEventListener('keydown', (e) => {
-            if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault();
-                privateCheckbox.click();
-            }
-        });
 
         function showCreateError(message) {
             createErrorBox.textContent = message;
@@ -509,9 +480,6 @@
 
             const name = nameInput.value.trim();
             const description = descriptionInput.value.trim();
-            const isPrivate = privateCheckbox
-                .querySelector('.checkbox')
-                .classList.contains('checked');
 
             if (!name) {
                 nameInput.classList.add('input-error');
@@ -525,8 +493,7 @@
             try {
                 const group = await api.groups.create({
                     name,
-                    description,
-                    is_private: isPrivate
+                    description
                 });
 
                 // Redirect to dashboard

@@ -298,6 +298,68 @@ const api = {
         async list() {
             return request(Config.GROUPS.LIST);
         },
+
+        /**
+         * Update a group
+         * @param {string} id - Group ID
+         * @param {Object} data - { name?, description? }
+         * @returns {Promise<Object>}
+         */
+        async update(id, data) {
+            return request(Config.GROUPS.DETAIL(id), {
+                method: 'PATCH',
+                body: JSON.stringify(data),
+            });
+        },
+
+        /**
+         * Delete a group
+         * @param {string} id - Group ID
+         * @returns {Promise<void>}
+         */
+        async delete(id) {
+            return request(Config.GROUPS.DETAIL(id), {
+                method: 'DELETE',
+            });
+        },
+
+        /**
+         * Remove a member from group
+         * @param {string} groupId - Group ID
+         * @param {string} userId - User ID to remove
+         * @returns {Promise<Object>}
+         */
+        async removeMember(groupId, userId) {
+            return request(Config.GROUPS.REMOVE_MEMBER(groupId), {
+                method: 'DELETE',
+                body: JSON.stringify({ user_id: userId }),
+            });
+        },
+
+        /**
+         * Update member role
+         * @param {string} groupId - Group ID
+         * @param {string} userId - User ID
+         * @param {string} role - New role ('admin' or 'member')
+         * @returns {Promise<Object>}
+         */
+        async updateMemberRole(groupId, userId, role) {
+            return request(Config.GROUPS.UPDATE_MEMBER_ROLE(groupId), {
+                method: 'POST',
+                body: JSON.stringify({ user_id: userId, role }),
+            });
+        },
+
+        /**
+         * Regenerate invite code
+         * @param {string} id - Group ID
+         * @returns {Promise<{invite_code: string}>}
+         */
+        async regenerateInviteCode(id) {
+            return request(Config.GROUPS.REGENERATE_INVITE(id), {
+                method: 'POST',
+            });
+        },
     },
 
     /**

@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/groups-list.css">
+    <link rel="stylesheet" href="/static/css/bottom-nav.css">
 </head>
 <body class="groups-list-page">
     <div class="page-container">
@@ -67,6 +68,7 @@
         import { api, ApiError } from '/static/js/api.js';
         import AuthStore from '/static/js/auth.js';
         import Config from '/static/js/config.js';
+        import { injectBottomNav } from '/static/js/bottom-nav.js';
 
         // Check authentication
         if (!AuthStore.isAuthenticated()) {
@@ -127,7 +129,7 @@
             } else {
                 // Render groups
                 groups.forEach(group => {
-                    const isOwner = group.owner_id === currentUserId;
+                    const isOwner = group.owner?.id === currentUserId;
                     const isAdmin = group.role === 'admin';
                     const roleBadge = isOwner
                         ? '<span class="group-role owner">vlastnik</span>'
@@ -157,7 +159,7 @@
         function updateStats(groups) {
             const totalGroups = groups.length;
             const totalMembers = groups.reduce((sum, g) => sum + (g.member_count || 0), 0);
-            const ownedGroups = groups.filter(g => g.owner_id === currentUserId).length;
+            const ownedGroups = groups.filter(g => g.owner?.id === currentUserId).length;
 
             statTotal.textContent = totalGroups;
             statMembers.textContent = totalMembers;
@@ -217,6 +219,9 @@
 
         // Initialize
         loadGroups();
+
+        // Inject bottom navigation
+        injectBottomNav('groups');
     </script>
 </body>
 </html>

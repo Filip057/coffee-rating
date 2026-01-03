@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/library.css">
     <link rel="stylesheet" href="/static/css/group-forms.css">
+    <link rel="stylesheet" href="/static/css/bottom-nav.css">
 </head>
 <body class="library-page">
     <div class="page-container">
@@ -184,6 +185,7 @@
         import { api, ApiError } from '/static/js/api.js';
         import AuthStore from '/static/js/auth.js';
         import Config from '/static/js/config.js';
+        import { injectBottomNav } from '/static/js/bottom-nav.js';
 
         // Check authentication
         if (!AuthStore.isAuthenticated()) {
@@ -286,7 +288,6 @@
                             <div class="empty-state-icon">📚</div>
                             <h3 class="empty-state-title">Prazdna knihovna</h3>
                             <p class="empty-state-text">Zatim nemáte zadne kavy v knihovne. Prozkoumejte katalog a pridejte si oblibene kavy.</p>
-                            <a href="/beans/" class="btn btn-primary">Prozkoumat kavy</a>
                         </div>
                     `;
                 }
@@ -592,6 +593,9 @@
 
         // Initialize
         loadLibrary();
+
+        // Inject bottom navigation
+        injectBottomNav('library');
     </script>
 </body>
 </html>

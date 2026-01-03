@@ -29,6 +29,9 @@ const Config = {
         LEAVE: (id) => `/groups/${id}/leave/`,
         LIBRARY: (id) => `/groups/${id}/library/`,
         ADD_TO_LIBRARY: (id) => `/groups/${id}/add_to_library/`,
+        REMOVE_MEMBER: (id) => `/groups/${id}/remove_member/`,
+        UPDATE_MEMBER_ROLE: (id) => `/groups/${id}/update_member_role/`,
+        REGENERATE_INVITE: (id) => `/groups/${id}/regenerate_invite/`,
     },
 
     // Reviews/Library endpoints

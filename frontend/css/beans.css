@@ -344,6 +344,7 @@
 
 /* Add to Library Button */
 .add-to-library-btn {
+    position: relative;
     width: 36px;
     height: 36px;
     display: flex;
@@ -360,12 +361,48 @@
 .add-to-library-btn:hover {
     border-color: #A47449;
     color: #A47449;
+    background: rgba(164, 116, 73, 0.1);
+}
+
+/* Tooltip on hover */
+.add-to-library-btn:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 6px 10px;
+    background: var(--espresso);
+    color: var(--porcelain);
+    font-size: 0.7rem;
+    font-weight: 500;
+    white-space: nowrap;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+    z-index: 10;
+}
+
+.add-to-library-btn:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--espresso);
+    z-index: 10;
 }
 
 .add-to-library-btn.added {
     background: rgba(107, 142, 94, 0.15);
     border-color: var(--success);
     color: var(--success);
+}
+
+/* Hide tooltip for added state */
+.add-to-library-btn.added:hover::after,
+.add-to-library-btn.added:hover::before {
+    display: none;
 }
 
 .add-to-library-btn svg {

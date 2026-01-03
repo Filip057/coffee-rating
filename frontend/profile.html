@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/static/css/variables.css">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/profile.css">
+    <link rel="stylesheet" href="/static/css/bottom-nav.css">
 </head>
 <body class="profile-page">
     <div class="page-container">
@@ -163,6 +164,7 @@
         import { api, ApiError } from '/static/js/api.js';
         import AuthStore from '/static/js/auth.js';
         import Config from '/static/js/config.js';
+        import { injectBottomNav } from '/static/js/bottom-nav.js';
 
         // Check authentication
         if (!AuthStore.isAuthenticated()) {
@@ -346,6 +348,9 @@
 
         // Initialize
         loadProfile();
+
+        // Inject bottom navigation
+        injectBottomNav('profile');
     </script>
 </body>
 </html>
