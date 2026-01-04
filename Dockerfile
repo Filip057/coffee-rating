@@ -8,17 +8,15 @@ ENV PYTHONUNBUFFERED=1
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (PostgreSQL only - no MySQL for faster builds)
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
-    default-libmysqlclient-dev \
-    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies (use render-specific requirements if available)
+COPY requirements-render.txt requirements.txt ./
+RUN pip install --no-cache-dir -r requirements-render.txt
 
 # Copy project
 COPY . .
