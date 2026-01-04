@@ -1,5 +1,22 @@
 from django.http import JsonResponse, FileResponse, Http404
 from django.conf import settings
+from django.db import connection
+
+
+def health_check(request):
+    """Health check endpoint for monitoring and deployment."""
+    try:
+        # Check database connection
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+        db_status = 'ok'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+
+    return JsonResponse({
+        'status': 'ok' if db_status == 'ok' else 'degraded',
+        'database': db_status,
+    })
 
 
 def serve_frontend(request, page='login.html', **kwargs):

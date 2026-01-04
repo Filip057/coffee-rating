@@ -21,9 +21,12 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from config.views import serve_frontend
+from config.views import serve_frontend, health_check
 
 urlpatterns = [
+    # Health check (for Render)
+    path('api/health/', health_check, name='health-check'),
+
     # Admin
     path('admin/', admin.site.urls),
 

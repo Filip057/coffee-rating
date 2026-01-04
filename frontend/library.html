@@ -72,6 +72,19 @@
             <button class="filter-chip" data-filter="archived">Archivovane</button>
         </div>
 
+        <!-- Sort Options -->
+        <div class="sort-bar">
+            <span class="sort-label">Radit:</span>
+            <select class="sort-select" id="sortSelect">
+                <option value="added_desc">Nejnovejsi</option>
+                <option value="added_asc">Nejstarsi</option>
+                <option value="rating_desc">Hodnoceni ↓</option>
+                <option value="rating_asc">Hodnoceni ↑</option>
+                <option value="name_asc">Nazev A-Z</option>
+                <option value="name_desc">Nazev Z-A</option>
+            </select>
+        </div>
+
         <!-- Library List -->
         <div class="library-list" id="libraryList">
             <div class="skeleton library-item-skeleton"></div>
@@ -196,12 +209,14 @@
         let allLibraryItems = [];
         let currentFilter = 'all';
         let searchQuery = '';
+        let currentSort = 'added_desc';
 
         // DOM Elements
         const libraryList = document.getElementById('libraryList');
         const searchInput = document.getElementById('searchInput');
         const filterBtn = document.getElementById('filterBtn');
         const filterOptions = document.getElementById('filterOptions');
+        const sortSelect = document.getElementById('sortSelect');
         const statTotal = document.getElementById('statTotal');
         const statReviewed = document.getElementById('statReviewed');
         const statAvgRating = document.getElementById('statAvgRating');
@@ -267,6 +282,26 @@
                     item.coffeebean?.origin_country?.toLowerCase().includes(query)
                 );
             }
+
+            // Apply sorting
+            filtered.sort((a, b) => {
+                switch (currentSort) {
+                    case 'added_desc':
+                        return new Date(b.added_at) - new Date(a.added_at);
+                    case 'added_asc':
+                        return new Date(a.added_at) - new Date(b.added_at);
+                    case 'rating_desc':
+                        return (b.user_rating || 0) - (a.user_rating || 0);
+                    case 'rating_asc':
+                        return (a.user_rating || 0) - (b.user_rating || 0);
+                    case 'name_asc':
+                        return (a.coffeebean?.name || '').localeCompare(b.coffeebean?.name || '');
+                    case 'name_desc':
+                        return (b.coffeebean?.name || '').localeCompare(a.coffeebean?.name || '');
+                    default:
+                        return 0;
+                }
+            });
 
             return filtered;
         }
@@ -384,6 +419,12 @@
                 searchQuery = e.target.value;
                 renderLibrary(getFilteredItems());
             }, 200);
+        });
+
+        // Sort change
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            renderLibrary(getFilteredItems());
         });
 
         // === ADD BEAN MODAL ===

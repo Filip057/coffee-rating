@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=local-dev-secret-key-change-in-production
+      - DATABASE_URL=mysql://coffee_user:coffee_pass@db:3306/coffee_rating
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    command: python manage.py runserver 0.0.0.0:8000
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: coffee_rating
+      MYSQL_USER: coffee_user
+      MYSQL_PASSWORD: coffee_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:
+  static_volume:

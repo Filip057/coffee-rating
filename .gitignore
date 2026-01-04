@@ -1,4 +1,9 @@
+# Environment
 .env
+.env.local
+.env.production
+
+# Project notes
 claude_code_TODO.md
 
 # Python
@@ -7,6 +12,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pytest_cache/
 
 # Virtual Environment
 .venv/
@@ -26,3 +32,15 @@ db.sqlite3
 # Media and Static
 /media/
 /staticfiles/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Testing
+.coverage
+htmlcov/
+test_db.sqlite3

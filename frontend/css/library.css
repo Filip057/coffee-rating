@@ -183,6 +183,36 @@
     color: var(--porcelain);
 }
 
+/* Sort Bar */
+.sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sort-label {
+    font-size: 0.8rem;
+    color: var(--steam);
+}
+
+.sort-select {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+    color: var(--espresso);
+    background: var(--porcelain);
+    border: 1px solid var(--latte);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+}
+
+.sort-select:focus {
+    outline: none;
+    border-color: #A47449;
+}
+
 /* Library List */
 .library-list {
     display: flex;

@@ -84,6 +84,18 @@
             </div>
         </div>
 
+        <!-- Sort Bar -->
+        <div class="sort-bar">
+            <span class="sort-label">Radit:</span>
+            <select class="sort-select" id="sortSelect">
+                <option value="rating_desc">Hodnoceni ↓</option>
+                <option value="rating_asc">Hodnoceni ↑</option>
+                <option value="reviews_desc">Nejv. hodnoceno</option>
+                <option value="name_asc">Nazev A-Z</option>
+                <option value="name_desc">Nazev Z-A</option>
+            </select>
+        </div>
+
         <!-- Results Info -->
         <div class="results-info" id="resultsInfo">Nacitam...</div>
 
@@ -126,6 +138,7 @@
         let currentPage = 1;
         let totalPages = 1;
         let searchQuery = '';
+        let currentSort = 'rating_desc';
         let filters = {
             roastery: '',
             origin: '',
@@ -144,6 +157,7 @@
         const roastChips = document.getElementById('roastChips');
         const processingChips = document.getElementById('processingChips');
         const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const sortSelect = document.getElementById('sortSelect');
         const resultsInfo = document.getElementById('resultsInfo');
         const pagination = document.getElementById('pagination');
         const prevBtn = document.getElementById('prevBtn');
@@ -338,6 +352,26 @@
             }
         }
 
+        // Sort beans locally
+        function sortBeans(beans) {
+            return [...beans].sort((a, b) => {
+                switch (currentSort) {
+                    case 'rating_desc':
+                        return (parseFloat(b.average_rating) || 0) - (parseFloat(a.average_rating) || 0);
+                    case 'rating_asc':
+                        return (parseFloat(a.average_rating) || 0) - (parseFloat(b.average_rating) || 0);
+                    case 'reviews_desc':
+                        return (b.review_count || 0) - (a.review_count || 0);
+                    case 'name_asc':
+                        return (a.name || '').localeCompare(b.name || '');
+                    case 'name_desc':
+                        return (b.name || '').localeCompare(a.name || '');
+                    default:
+                        return 0;
+                }
+            });
+        }
+
         // Load beans
         async function loadBeans() {
             beansList.innerHTML = `
@@ -358,9 +392,12 @@
                 if (filters.processing) params.processing = filters.processing;
 
                 const response = await api.beans.list(params);
-                const beans = response.results || response;
+                let beans = response.results || response;
                 const totalCount = response.count || beans.length;
                 totalPages = Math.ceil(totalCount / 20);
+
+                // Apply client-side sorting
+                beans = sortBeans(beans);
 
                 renderBeans(beans, totalCount);
             } catch (error) {
@@ -437,6 +474,12 @@
                 c.classList.toggle('active', i === 0);
             });
             currentPage = 1;
+            loadBeans();
+        });
+
+        // Sort change
+        sortSelect.addEventListener('change', (e) => {
+            currentSort = e.target.value;
             loadBeans();
         });
 

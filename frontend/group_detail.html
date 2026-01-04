@@ -406,8 +406,38 @@
         const cancelLeaveBtn = document.getElementById('cancelLeaveBtn');
         const confirmLeaveBtn = document.getElementById('confirmLeaveBtn');
 
+        // Owner action elements
+        const editGroupBtn = document.getElementById('editGroupBtn');
+        const ownerActionsSection = document.getElementById('ownerActionsSection');
+        const regenerateInviteBtn = document.getElementById('regenerateInviteBtn');
+        const deleteGroupBtn = document.getElementById('deleteGroupBtn');
+
+        // Edit group modal elements
+        const editGroupModal = document.getElementById('editGroupModal');
+        const editGroupForm = document.getElementById('editGroupForm');
+        const editGroupName = document.getElementById('editGroupName');
+        const editGroupDescription = document.getElementById('editGroupDescription');
+        const editGroupError = document.getElementById('editGroupError');
+        const cancelEditGroupBtn = document.getElementById('cancelEditGroupBtn');
+        const submitEditGroupBtn = document.getElementById('submitEditGroupBtn');
+
+        // Delete group modal elements
+        const deleteGroupModal = document.getElementById('deleteGroupModal');
+        const deleteGroupError = document.getElementById('deleteGroupError');
+        const cancelDeleteGroupBtn = document.getElementById('cancelDeleteGroupBtn');
+        const confirmDeleteGroupBtn = document.getElementById('confirmDeleteGroupBtn');
+
+        // Remove member modal elements
+        const removeMemberModal = document.getElementById('removeMemberModal');
+        const removeMemberText = document.getElementById('removeMemberText');
+        const removeMemberError = document.getElementById('removeMemberError');
+        const cancelRemoveMemberBtn = document.getElementById('cancelRemoveMemberBtn');
+        const confirmRemoveMemberBtn = document.getElementById('confirmRemoveMemberBtn');
+        let memberToRemove = null;
+
         let currentGroup = null;
         let currentUserRole = null;
+        let currentUserId = AuthStore.getUser()?.id;
 
         // Escape HTML
         function escapeHtml(text) {
@@ -451,15 +481,19 @@
                 groupDescription.textContent = group.description || 'Bez popisu';
                 memberCount.textContent = group.member_count;
 
-                // Show invite code only for owner
-                if (group.user_role === 'owner' && group.invite_code) {
+                // Show invite code only for owner/admin
+                if ((group.user_role === 'owner' || group.user_role === 'admin') && group.invite_code) {
                     inviteSection.style.display = 'block';
                     inviteCode.textContent = group.invite_code;
                 }
 
-                // Hide leave button for owner
+                // Show/hide owner actions
                 if (group.user_role === 'owner') {
                     actionsSection.style.display = 'none';
+                    ownerActionsSection.style.display = 'flex';
+                    editGroupBtn.style.display = 'flex';
+                } else if (group.user_role === 'admin') {
+                    editGroupBtn.style.display = 'flex';
                 }
 
             } catch (error) {
@@ -489,19 +523,40 @@
                 members.forEach(membership => {
                     const user = membership.user;
                     const initials = getInitials(user.display_name);
+                    const isCurrentUser = user.id === currentUserId;
+                    const canRemove = (currentUserRole === 'owner' || currentUserRole === 'admin') &&
+                                      !isCurrentUser &&
+                                      membership.role !== 'owner';
+
                     html += `
                         <div class="member-item">
                             <div class="member-avatar">${initials}</div>
                             <div class="member-info">
-                                <div class="member-name">${escapeHtml(user.display_name)}</div>
+                                <div class="member-name">${escapeHtml(user.display_name)}${isCurrentUser ? ' (vy)' : ''}</div>
                                 <div class="member-email">${escapeHtml(user.email)}</div>
                             </div>
-                            <span class="member-role ${membership.role}">${getRoleLabel(membership.role)}</span>
+                            <div class="member-actions">
+                                <span class="member-role ${membership.role}">${getRoleLabel(membership.role)}</span>
+                                ${canRemove ? `
+                                    <button class="member-remove-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.display_name)}" title="Odebrat clena">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M18 6L6 18M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </div>
                     `;
                 });
 
                 membersList.innerHTML = html;
+
+                // Add event listeners for remove buttons
+                membersList.querySelectorAll('.member-remove-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        openRemoveMemberModal(btn.dataset.userId, btn.dataset.userName);
+                    });
+                });
 
             } catch (error) {
                 console.error('Failed to load members:', error);
@@ -653,11 +708,32 @@
             }
         });
 
-        // Leave group modal
-        leaveBtn.addEventListener('click', () => {
-            if (currentGroup) {
-                leaveModalText.textContent = `Opravdu chcete opustit skupinu "${currentGroup.name}"?`;
+        // Leave group modal with debt check
+        leaveBtn.addEventListener('click', async () => {
+            if (!currentGroup) return;
+
+            // Check for outstanding debts in this group
+            let debtWarning = '';
+            try {
+                const outstanding = await api.purchases.getOutstanding();
+                if (outstanding.shares && outstanding.shares.length > 0) {
+                    // Filter shares that belong to this group
+                    const groupDebts = outstanding.shares.filter(share =>
+                        share.purchase?.group === parseInt(groupId) ||
+                        share.group_id === parseInt(groupId)
+                    );
+
+                    if (groupDebts.length > 0) {
+                        const totalDebt = groupDebts.reduce((sum, share) => sum + (share.amount_owed || 0), 0);
+                        debtWarning = `\n\nPozor: Mate v teto skupine neuhrazeny dluh ${formatCZK(totalDebt / 100)}. Po opusteni skupiny bude dluh zrusen.`;
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check debts:', error);
+                // Continue without debt check if it fails
             }
+
+            leaveModalText.textContent = `Opravdu chcete opustit skupinu "${currentGroup.name}"?${debtWarning}`;
             leaveModal.classList.add('visible');
         });
 
@@ -1028,6 +1104,160 @@
             if (e.key === 'Escape') {
                 closeAddBeanModal();
                 closeAddPurchaseModal();
+                closeEditGroupModal();
+                closeDeleteGroupModal();
+                closeRemoveMemberModal();
+            }
+        });
+
+        // === EDIT GROUP MODAL ===
+        function openEditGroupModal() {
+            if (!currentGroup) return;
+            editGroupName.value = currentGroup.name || '';
+            editGroupDescription.value = currentGroup.description || '';
+            editGroupError.classList.remove('visible');
+            editGroupModal.classList.add('visible');
+            editGroupName.focus();
+        }
+
+        function closeEditGroupModal() {
+            editGroupModal.classList.remove('visible');
+        }
+
+        editGroupBtn.addEventListener('click', openEditGroupModal);
+        cancelEditGroupBtn.addEventListener('click', closeEditGroupModal);
+        editGroupModal.addEventListener('click', (e) => {
+            if (e.target === editGroupModal) closeEditGroupModal();
+        });
+
+        editGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = editGroupName.value.trim();
+            const description = editGroupDescription.value.trim();
+
+            if (!name) {
+                editGroupError.textContent = 'Zadejte nazev skupiny';
+                editGroupError.classList.add('visible');
+                return;
+            }
+
+            submitEditGroupBtn.disabled = true;
+            submitEditGroupBtn.classList.add('btn-loading');
+            editGroupError.classList.remove('visible');
+
+            try {
+                const updated = await api.groups.update(groupId, { name, description });
+                currentGroup = { ...currentGroup, ...updated };
+
+                // Update UI
+                pageTitle.textContent = updated.name;
+                document.title = `Kavarna - ${updated.name}`;
+                groupName.textContent = updated.name;
+                groupDescription.textContent = updated.description || 'Bez popisu';
+
+                closeEditGroupModal();
+            } catch (error) {
+                console.error('Failed to update group:', error);
+                editGroupError.textContent = error.data?.error || error.data?.detail || error.data?.name?.[0] || 'Nepodarilo se upravit skupinu';
+                editGroupError.classList.add('visible');
+            } finally {
+                submitEditGroupBtn.disabled = false;
+                submitEditGroupBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // === DELETE GROUP MODAL ===
+        function openDeleteGroupModal() {
+            deleteGroupError.classList.remove('visible');
+            deleteGroupModal.classList.add('visible');
+        }
+
+        function closeDeleteGroupModal() {
+            deleteGroupModal.classList.remove('visible');
+        }
+
+        deleteGroupBtn.addEventListener('click', openDeleteGroupModal);
+        cancelDeleteGroupBtn.addEventListener('click', closeDeleteGroupModal);
+        deleteGroupModal.addEventListener('click', (e) => {
+            if (e.target === deleteGroupModal) closeDeleteGroupModal();
+        });
+
+        confirmDeleteGroupBtn.addEventListener('click', async () => {
+            confirmDeleteGroupBtn.disabled = true;
+            confirmDeleteGroupBtn.classList.add('btn-loading');
+            deleteGroupError.classList.remove('visible');
+
+            try {
+                await api.groups.delete(groupId);
+                window.location.href = Config.ROUTES.GROUP_LIST;
+            } catch (error) {
+                console.error('Failed to delete group:', error);
+                deleteGroupError.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se smazat skupinu';
+                deleteGroupError.classList.add('visible');
+                confirmDeleteGroupBtn.disabled = false;
+                confirmDeleteGroupBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // === REGENERATE INVITE CODE ===
+        regenerateInviteBtn.addEventListener('click', async () => {
+            if (!confirm('Opravdu chcete vygenerovat novy kod? Stary kod prestane fungovat.')) {
+                return;
+            }
+
+            regenerateInviteBtn.disabled = true;
+            regenerateInviteBtn.classList.add('btn-loading');
+
+            try {
+                const result = await api.groups.regenerateInviteCode(groupId);
+                inviteCode.textContent = result.invite_code;
+                currentGroup.invite_code = result.invite_code;
+            } catch (error) {
+                console.error('Failed to regenerate invite code:', error);
+                alert(error.data?.error || 'Nepodarilo se vygenerovat novy kod');
+            } finally {
+                regenerateInviteBtn.disabled = false;
+                regenerateInviteBtn.classList.remove('btn-loading');
+            }
+        });
+
+        // === REMOVE MEMBER MODAL ===
+        function openRemoveMemberModal(userId, userName) {
+            memberToRemove = userId;
+            removeMemberText.textContent = `Opravdu chcete odebrat uzivatele "${userName}" ze skupiny?`;
+            removeMemberError.classList.remove('visible');
+            removeMemberModal.classList.add('visible');
+        }
+
+        function closeRemoveMemberModal() {
+            removeMemberModal.classList.remove('visible');
+            memberToRemove = null;
+        }
+
+        cancelRemoveMemberBtn.addEventListener('click', closeRemoveMemberModal);
+        removeMemberModal.addEventListener('click', (e) => {
+            if (e.target === removeMemberModal) closeRemoveMemberModal();
+        });
+
+        confirmRemoveMemberBtn.addEventListener('click', async () => {
+            if (!memberToRemove) return;
+
+            confirmRemoveMemberBtn.disabled = true;
+            confirmRemoveMemberBtn.classList.add('btn-loading');
+            removeMemberError.classList.remove('visible');
+
+            try {
+                await api.groups.removeMember(groupId, memberToRemove);
+                closeRemoveMemberModal();
+                loadMembers(); // Refresh the members list
+                loadGroup(); // Refresh member count
+            } catch (error) {
+                console.error('Failed to remove member:', error);
+                removeMemberError.textContent = error.data?.error || error.data?.detail || 'Nepodarilo se odebrat clena';
+                removeMemberError.classList.add('visible');
+            } finally {
+                confirmRemoveMemberBtn.disabled = false;
+                confirmRemoveMemberBtn.classList.remove('btn-loading');
             }
         });
 
