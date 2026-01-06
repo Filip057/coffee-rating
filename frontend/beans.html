@@ -146,6 +146,7 @@
             processing: ''
         };
         let userLibraryIds = new Set();
+        let userReviewedBeanIds = new Set();
 
         // DOM Elements
         const beansList = document.getElementById('beansList');
@@ -218,6 +219,18 @@
             }
         }
 
+        // Load user reviews to check which beans user has reviewed
+        async function loadUserReviews() {
+            if (!AuthStore.isAuthenticated()) return;
+
+            try {
+                const reviews = await api.reviews.getMyReviews();
+                userReviewedBeanIds = new Set(reviews.map(r => r.coffeebean?.id || r.coffeebean));
+            } catch (error) {
+                console.error('Failed to load user reviews:', error);
+            }
+        }
+
         // Load filter options
         async function loadFilterOptions() {
             try {
@@ -266,6 +279,7 @@
             let html = '';
             beans.forEach(bean => {
                 const inLibrary = userLibraryIds.has(bean.id);
+                const userReviewed = userReviewedBeanIds.has(bean.id);
                 const beanUrl = `/beans/${bean.id}/`;
 
                 html += `
@@ -281,17 +295,18 @@
                                 <div class="bean-tags">
                                     ${bean.roast_profile ? `<span class="bean-tag">${escapeHtml(formatRoast(bean.roast_profile))}</span>` : ''}
                                     ${bean.processing ? `<span class="bean-tag">${escapeHtml(formatProcessing(bean.processing))}</span>` : ''}
+                                    ${userReviewed ? `<span class="bean-tag" style="background: var(--accent-color); color: white;">✓ Hodnoceno</span>` : ''}
                                 </div>
                             </div>
                             <div class="bean-card-right">
-                                ${bean.average_rating ? `
+                                ${bean.avg_rating != null && bean.review_count > 0 ? `
                                     <div class="bean-card-rating">
                                         <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                        ${parseFloat(bean.average_rating).toFixed(1)}
+                                        ${Number(bean.avg_rating).toFixed(1)}
                                     </div>
-                                    <div class="bean-card-reviews">${bean.review_count || 0} hodnoceni</div>
+                                    <div class="bean-card-reviews">${bean.review_count} hodnoceni</div>
                                 ` : `
-                                    <span class="no-rating-badge">Bez hodnoceni</span>
+                                    <span class="no-rating-badge">Nehodnoceno</span>
                                 `}
                             </div>
                         </a>
@@ -522,7 +537,10 @@
 
         // Initialize
         async function init() {
-            await loadUserLibrary();
+            await Promise.all([
+                loadUserLibrary(),
+                loadUserReviews()
+            ]);
             await loadFilterOptions();
             await loadBeans();
         }
