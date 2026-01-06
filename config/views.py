@@ -32,6 +32,7 @@ def serve_frontend(request, page='login.html', **kwargs):
         'group_detail': 'group_detail.html',
         'library': 'library.html',
         'beans': 'beans.html',
+        'beans/create': 'bean_create.html',
         'bean_detail': 'bean_detail.html',
         'reviews/create': 'review_create.html',
         'profile': 'profile.html',
