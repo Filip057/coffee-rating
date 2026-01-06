@@ -369,7 +369,6 @@
         import { injectBottomNav } from '/static/js/bottom-nav.js';
 
         // Check authentication
-        console.log('Group detail script starting...');
         if (!AuthStore.isAuthenticated()) {
             window.location.href = Config.ROUTES.LOGIN;
         }
@@ -377,8 +376,6 @@
         // Get group ID from URL
         const pathParts = window.location.pathname.split('/');
         const groupId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
-
-        console.log('Group ID:', groupId);
 
         if (!groupId) {
             window.location.href = Config.ROUTES.DASHBOARD;
@@ -573,27 +570,14 @@
 
         // Load library
         async function loadLibrary() {
-            console.log('loadLibrary() function called');
-            console.log('libraryList in loadLibrary:', libraryList);
-
             // Defensive check
             if (!libraryList) {
                 console.error('libraryList element not found!');
                 return;
             }
 
-            console.log('Setting loading state...');
-            // Show loading state
-            libraryList.innerHTML = `
-                <div class="empty-state">
-                    <p>Nacitam knihovnu...</p>
-                </div>
-            `;
-            console.log('Loading state set, innerHTML:', libraryList.innerHTML);
-
             try {
                 const library = await api.groups.getLibrary(groupId);
-                console.log('Group library loaded:', library);
 
                 // Ensure library is an array
                 if (!Array.isArray(library)) {
@@ -614,49 +598,42 @@
                 }
 
                 let html = '';
-                library.forEach((entry, index) => {
-                    try {
-                        const bean = entry.coffeebean;
+                library.forEach(entry => {
+                    const bean = entry.coffeebean;
 
-                        // Skip if bean is missing or inactive
-                        if (!bean || !bean.id) {
-                            console.warn(`Skipping entry ${index}: missing bean data`, entry);
-                            return;
-                        }
-
-                        const beanUrl = `/beans/${bean.id}/`;
-
-                        html += `
-                            <div class="library-item">
-                                <a href="${beanUrl}" style="display: contents; color: inherit; text-decoration: none;">
-                                    <div class="bean-icon">☕</div>
-                                    <div class="bean-info">
-                                        <div class="bean-name">${escapeHtml(bean.name)}</div>
-                                        <div class="bean-roastery">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
-                                    </div>
-                                    ${bean.avg_rating ? `
-                                        <div class="bean-rating">
-                                            <span>★</span>
-                                            <span>${bean.avg_rating.toFixed(1)}</span>
-                                        </div>
-                                    ` : ''}
-                                </a>
-                            </div>
-                        `;
-                    } catch (itemError) {
-                        console.error(`Error rendering library item ${index}:`, itemError, entry);
+                    // Skip if bean is missing or inactive
+                    if (!bean || !bean.id) {
+                        return;
                     }
+
+                    const beanUrl = `/beans/${bean.id}/`;
+
+                    html += `
+                        <div class="library-item">
+                            <a href="${beanUrl}" style="display: contents; color: inherit; text-decoration: none;">
+                                <div class="bean-icon">☕</div>
+                                <div class="bean-info">
+                                    <div class="bean-name">${escapeHtml(bean.name)}</div>
+                                    <div class="bean-roastery">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
+                                </div>
+                                ${bean.avg_rating != null ? `
+                                    <div class="bean-rating">
+                                        <span>★</span>
+                                        <span>${Number(bean.avg_rating).toFixed(1)}</span>
+                                    </div>
+                                ` : ''}
+                            </a>
+                        </div>
+                    `;
                 });
 
                 libraryList.innerHTML = html;
 
             } catch (error) {
                 console.error('Failed to load library:', error);
-                console.error('Error details:', error.message, error.stack);
                 libraryList.innerHTML = `
                     <div class="empty-state">
                         <p>Chyba pri nacitani knihovny</p>
-                        <p style="font-size: 12px; color: #999;">${escapeHtml(error.message)}</p>
                     </div>
                 `;
             }
@@ -1307,11 +1284,8 @@
         });
 
         // Initialize
-        console.log('Initializing group detail page...');
-        console.log('libraryList element:', libraryList);
         loadGroup();
         loadMembers();
-        console.log('Calling loadLibrary()...');
         loadLibrary();
         loadPurchases();
 
