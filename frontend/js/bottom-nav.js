@@ -35,8 +35,8 @@ function generateBottomNavHTML(activePage = null) {
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
-        <button type="button" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></button>
-        <button type="button" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></button>
+        <a href="/beans/" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></a>
+        <a href="/review/create/" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></a>
         <a href="/purchases/create/" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 
@@ -93,8 +93,6 @@ function initBottomNav() {
     const fabBtn = document.getElementById('fabBtn');
     const fabMenu = document.getElementById('fabMenu');
     const fabOverlay = document.getElementById('fabOverlay');
-    const fabAddBean = document.getElementById('fabAddBean');
-    const fabAddReview = document.getElementById('fabAddReview');
 
     if (!fabBtn || !fabMenu || !fabOverlay) {
         console.warn('Bottom nav elements not found');
@@ -118,22 +116,14 @@ function initBottomNav() {
     fabBtn.addEventListener('click', toggleFab);
     fabOverlay.addEventListener('click', closeFab);
 
-    // Handle FAB menu items that need modals
-    if (fabAddBean) {
-        fabAddBean.addEventListener('click', () => {
+    // FAB menu items are now links, they'll navigate automatically
+    // Close FAB when any menu item is clicked
+    const fabMenuItems = fabMenu.querySelectorAll('.fab-menu-item');
+    fabMenuItems.forEach(item => {
+        item.addEventListener('click', () => {
             closeFab();
-            // Dispatch event for pages to handle
-            window.dispatchEvent(new CustomEvent('fab:add-bean'));
         });
-    }
-
-    if (fabAddReview) {
-        fabAddReview.addEventListener('click', () => {
-            closeFab();
-            // Dispatch event for pages to handle
-            window.dispatchEvent(new CustomEvent('fab:add-review'));
-        });
-    }
+    });
 
     // Close on escape
     document.addEventListener('keydown', (e) => {
