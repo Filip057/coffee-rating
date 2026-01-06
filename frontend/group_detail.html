@@ -369,6 +369,7 @@
         import { injectBottomNav } from '/static/js/bottom-nav.js';
 
         // Check authentication
+        console.log('Group detail script starting...');
         if (!AuthStore.isAuthenticated()) {
             window.location.href = Config.ROUTES.LOGIN;
         }
@@ -376,6 +377,8 @@
         // Get group ID from URL
         const pathParts = window.location.pathname.split('/');
         const groupId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
+
+        console.log('Group ID:', groupId);
 
         if (!groupId) {
             window.location.href = Config.ROUTES.DASHBOARD;
@@ -570,18 +573,23 @@
 
         // Load library
         async function loadLibrary() {
+            console.log('loadLibrary() function called');
+            console.log('libraryList in loadLibrary:', libraryList);
+
             // Defensive check
             if (!libraryList) {
                 console.error('libraryList element not found!');
                 return;
             }
 
+            console.log('Setting loading state...');
             // Show loading state
             libraryList.innerHTML = `
                 <div class="empty-state">
                     <p>Nacitam knihovnu...</p>
                 </div>
             `;
+            console.log('Loading state set, innerHTML:', libraryList.innerHTML);
 
             try {
                 const library = await api.groups.getLibrary(groupId);
@@ -1299,8 +1307,11 @@
         });
 
         // Initialize
+        console.log('Initializing group detail page...');
+        console.log('libraryList element:', libraryList);
         loadGroup();
         loadMembers();
+        console.log('Calling loadLibrary()...');
         loadLibrary();
         loadPurchases();
 
