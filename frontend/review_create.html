@@ -432,16 +432,14 @@
                 };
 
                 // Add optional fields
-                if (parseFloat(aromaScore.value) > 0) reviewData.aroma_score = parseFloat(aromaScore.value);
-                if (parseFloat(flavorScore.value) > 0) reviewData.flavor_score = parseFloat(flavorScore.value);
-                if (parseFloat(acidityScore.value) > 0) reviewData.acidity_score = parseFloat(acidityScore.value);
-                if (parseFloat(bodyScore.value) > 0) reviewData.body_score = parseFloat(bodyScore.value);
-                if (parseFloat(aftertasteScore.value) > 0) reviewData.aftertaste_score = parseFloat(aftertasteScore.value);
+                if (parseInt(aromaScore.value) > 0) reviewData.aroma_score = parseInt(aromaScore.value);
+                if (parseInt(flavorScore.value) > 0) reviewData.flavor_score = parseInt(flavorScore.value);
+                if (parseInt(acidityScore.value) > 0) reviewData.acidity_score = parseInt(acidityScore.value);
+                if (parseInt(bodyScore.value) > 0) reviewData.body_score = parseInt(bodyScore.value);
+                if (parseInt(aftertasteScore.value) > 0) reviewData.aftertaste_score = parseInt(aftertasteScore.value);
                 if (selectedBrewMethod) reviewData.brew_method = selectedBrewMethod;
                 if (notes.value.trim()) reviewData.notes = notes.value.trim();
                 if (wouldBuyAgain !== null) reviewData.would_buy_again = wouldBuyAgain;
-
-                console.log('Submitting review data:', reviewData);
 
                 if (existingReview) {
                     // Update existing review
@@ -460,10 +458,8 @@
 
             } catch (error) {
                 console.error('Failed to save review:', error);
-                console.error('Error status:', error.status);
-                console.error('Error data:', error.data);
 
-                // Try to extract meaningful error message
+                // Extract meaningful error message
                 let errorMessage = 'Nepodarilo se ulozit hodnoceni';
 
                 if (error.data) {
@@ -473,8 +469,6 @@
                     else if (error.data.error) errorMessage = error.data.error;
                     else if (error.data.detail) errorMessage = error.data.detail;
                     else if (error.data.non_field_errors) errorMessage = error.data.non_field_errors[0];
-                    // Show full error in console for debugging
-                    console.error('Full error data:', JSON.stringify(error.data, null, 2));
                 }
 
                 formError.textContent = errorMessage;
