@@ -249,6 +249,20 @@
             });
         }
 
+        // Format brew method
+        function formatBrewMethod(method) {
+            const methods = {
+                'espresso': 'Espresso',
+                'filter': 'Filter',
+                'french_press': 'French Press',
+                'aeropress': 'Aeropress',
+                'moka': 'Moka',
+                'pour_over': 'Pour Over',
+                'cold_brew': 'Cold Brew'
+            };
+            return methods[method] || method;
+        }
+
         // Render star rating
         function renderStars(rating, maxStars = 5) {
             let html = '';
@@ -420,7 +434,7 @@
 
                 if (myReview) {
                     myReviewRating.textContent = myReview.rating.toFixed(1);
-                    myReviewText.textContent = myReview.comment || 'Bez komentare';
+                    myReviewText.textContent = myReview.notes || 'Bez komentare';
                     myReviewDate.textContent = formatDate(myReview.created_at);
                     myReviewSection.style.display = 'block';
 
@@ -434,9 +448,36 @@
                     `;
                 }
 
-                // TODO: Load other reviews from API when endpoint is available
-                // For now, show empty state if no reviews
-                if (!myReview && (!bean.review_count || bean.review_count === 0)) {
+                // Load other users' reviews
+                const allReviews = await api.reviews.getByBean(beanId);
+                const otherReviews = allReviews.filter(r => r.author?.id !== currentUser?.id);
+
+                if (otherReviews.length > 0) {
+                    let html = '<div class="other-reviews-header"><h4>Dalsi hodnoceni</h4></div>';
+                    otherReviews.forEach(review => {
+                        html += `
+                            <div class="review-card">
+                                <div class="review-header">
+                                    <div class="review-rating">
+                                        <span class="rating-stars">${'★'.repeat(review.rating)}${'☆'.repeat(5 - review.rating)}</span>
+                                        <span class="rating-value">${review.rating.toFixed(1)}</span>
+                                    </div>
+                                    <div class="review-date">${formatDate(review.created_at)}</div>
+                                </div>
+                                ${review.notes ? `
+                                    <div class="review-text">${escapeHtml(review.notes)}</div>
+                                ` : ''}
+                                ${review.brew_method ? `
+                                    <div class="review-meta">
+                                        <span class="meta-label">Zpusob pripravy:</span>
+                                        <span>${escapeHtml(formatBrewMethod(review.brew_method))}</span>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                    reviewsList.innerHTML = html;
+                } else if (!myReview && (!bean.review_count || bean.review_count === 0)) {
                     reviewsList.innerHTML = `
                         <div class="empty-reviews">
                             <div class="empty-reviews-icon">✍️</div>
