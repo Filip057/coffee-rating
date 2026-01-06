@@ -570,6 +570,19 @@
 
         // Load library
         async function loadLibrary() {
+            // Defensive check
+            if (!libraryList) {
+                console.error('libraryList element not found!');
+                return;
+            }
+
+            // Show loading state
+            libraryList.innerHTML = `
+                <div class="empty-state">
+                    <p>Nacitam knihovnu...</p>
+                </div>
+            `;
+
             try {
                 const library = await api.groups.getLibrary(groupId);
                 console.log('Group library loaded:', library);
