@@ -35,8 +35,8 @@ function generateBottomNavHTML(activePage = null) {
 
     <!-- FAB Menu -->
     <div class="fab-menu" id="fabMenu">
-        <a href="/beans/" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></a>
-        <a href="/review/create/" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></a>
+        <a href="/beans/create/" class="fab-menu-item" id="fabAddBean"><span>☕</span><span>Pridat kavu</span></a>
+        <a href="/reviews/create/" class="fab-menu-item" id="fabAddReview"><span>⭐</span><span>Nove hodnoceni</span></a>
         <a href="/purchases/create/" class="fab-menu-item" id="fabAddPurchase"><span>🛒</span><span>Zaznamenat nakup</span></a>
     </div>
 

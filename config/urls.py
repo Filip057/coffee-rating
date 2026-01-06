@@ -59,6 +59,7 @@ urlpatterns = [
     path('groups/<uuid:group_id>/', serve_frontend, {'page': 'group_detail'}, name='group-detail'),
     path('library/', serve_frontend, {'page': 'library'}, name='library'),
     path('beans/', serve_frontend, {'page': 'beans'}, name='beans'),
+    path('beans/create/', serve_frontend, {'page': 'beans/create'}, name='bean-create'),
     path('beans/<uuid:bean_id>/', serve_frontend, {'page': 'bean_detail'}, name='bean-detail'),
     path('reviews/create/', serve_frontend, {'page': 'reviews/create'}, name='review-create'),
     path('profile/', serve_frontend, {'page': 'profile'}, name='profile'),
