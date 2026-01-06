@@ -441,6 +441,8 @@
                 if (notes.value.trim()) reviewData.notes = notes.value.trim();
                 if (wouldBuyAgain !== null) reviewData.would_buy_again = wouldBuyAgain;
 
+                console.log('Submitting review data:', reviewData);
+
                 if (existingReview) {
                     // Update existing review
                     await api.reviews.update(existingReview.id, reviewData);
@@ -458,7 +460,24 @@
 
             } catch (error) {
                 console.error('Failed to save review:', error);
-                formError.textContent = error.data?.error || error.data?.detail || error.data?.rating?.[0] || 'Nepodarilo se ulozit hodnoceni';
+                console.error('Error status:', error.status);
+                console.error('Error data:', error.data);
+
+                // Try to extract meaningful error message
+                let errorMessage = 'Nepodarilo se ulozit hodnoceni';
+
+                if (error.data) {
+                    // Check for field-specific errors
+                    if (error.data.coffeebean) errorMessage = `Kava: ${error.data.coffeebean[0]}`;
+                    else if (error.data.rating) errorMessage = `Hodnoceni: ${error.data.rating[0]}`;
+                    else if (error.data.error) errorMessage = error.data.error;
+                    else if (error.data.detail) errorMessage = error.data.detail;
+                    else if (error.data.non_field_errors) errorMessage = error.data.non_field_errors[0];
+                    // Show full error in console for debugging
+                    console.error('Full error data:', JSON.stringify(error.data, null, 2));
+                }
+
+                formError.textContent = errorMessage;
                 formError.classList.add('visible');
                 submitBtn.disabled = false;
             } finally {
