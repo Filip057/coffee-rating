@@ -572,6 +572,13 @@
         async function loadLibrary() {
             try {
                 const library = await api.groups.getLibrary(groupId);
+                console.log('Group library loaded:', library);
+
+                // Ensure library is an array
+                if (!Array.isArray(library)) {
+                    throw new Error('Library response is not an array');
+                }
+
                 libraryBadge.textContent = library.length;
                 libraryCount.textContent = library.length;
 
@@ -586,42 +593,49 @@
                 }
 
                 let html = '';
-                library.forEach(entry => {
-                    const bean = entry.coffeebean;
+                library.forEach((entry, index) => {
+                    try {
+                        const bean = entry.coffeebean;
 
-                    // Skip if bean is missing or inactive
-                    if (!bean || !bean.id) {
-                        return;
-                    }
+                        // Skip if bean is missing or inactive
+                        if (!bean || !bean.id) {
+                            console.warn(`Skipping entry ${index}: missing bean data`, entry);
+                            return;
+                        }
 
-                    const beanUrl = `/beans/${bean.id}/`;
+                        const beanUrl = `/beans/${bean.id}/`;
 
-                    html += `
-                        <div class="library-item">
-                            <a href="${beanUrl}" style="display: contents; color: inherit; text-decoration: none;">
-                                <div class="bean-icon">☕</div>
-                                <div class="bean-info">
-                                    <div class="bean-name">${escapeHtml(bean.name)}</div>
-                                    <div class="bean-roastery">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
-                                </div>
-                                ${bean.avg_rating ? `
-                                    <div class="bean-rating">
-                                        <span>★</span>
-                                        <span>${bean.avg_rating.toFixed(1)}</span>
+                        html += `
+                            <div class="library-item">
+                                <a href="${beanUrl}" style="display: contents; color: inherit; text-decoration: none;">
+                                    <div class="bean-icon">☕</div>
+                                    <div class="bean-info">
+                                        <div class="bean-name">${escapeHtml(bean.name)}</div>
+                                        <div class="bean-roastery">${escapeHtml(bean.roastery_name || 'Neznama prazirna')}</div>
                                     </div>
-                                ` : ''}
-                            </a>
-                        </div>
-                    `;
+                                    ${bean.avg_rating ? `
+                                        <div class="bean-rating">
+                                            <span>★</span>
+                                            <span>${bean.avg_rating.toFixed(1)}</span>
+                                        </div>
+                                    ` : ''}
+                                </a>
+                            </div>
+                        `;
+                    } catch (itemError) {
+                        console.error(`Error rendering library item ${index}:`, itemError, entry);
+                    }
                 });
 
                 libraryList.innerHTML = html;
 
             } catch (error) {
                 console.error('Failed to load library:', error);
+                console.error('Error details:', error.message, error.stack);
                 libraryList.innerHTML = `
                     <div class="empty-state">
                         <p>Chyba pri nacitani knihovny</p>
+                        <p style="font-size: 12px; color: #999;">${escapeHtml(error.message)}</p>
                     </div>
                 `;
             }
