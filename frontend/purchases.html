@@ -287,6 +287,8 @@
                 const shares = purchase.payment_shares || [];
                 const paidShares = shares.filter(s => s.status === 'paid').length;
                 const totalShares = shares.length;
+                const isPersonal = !purchase.group;
+                const isPaid = purchase.is_fully_paid;
 
                 html += `
                     <div class="purchase-card">
@@ -300,29 +302,47 @@
                                 <div class="purchase-total-amount">${formatCZK(totalPrice)}</div>
                             </div>
                         </div>
-                        <div class="purchase-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%"></div>
+                        ${isPersonal ? `
+                            <div class="purchase-status-badge ${isPaid ? 'paid' : 'unpaid'}">
+                                ${isPaid ? `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Osobni nakup - Zaplaceno
+                                ` : `
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                    Osobni nakup - Nezaplaceno
+                                `}
                             </div>
-                            <div class="progress-text">
-                                <span>${formatCZK(totalCollected)} vybrano</span>
-                                <span>${paidShares}/${totalShares} zaplaceno</span>
+                        ` : `
+                            <div class="purchase-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: ${progress}%"></div>
+                                </div>
+                                <div class="progress-text">
+                                    <span>${formatCZK(totalCollected)} vybrano</span>
+                                    <span>${paidShares}/${totalShares} zaplaceno</span>
+                                </div>
                             </div>
-                        </div>
-                        ${shares.length > 0 ? `
-                            <div class="purchase-shares">
-                                ${shares.map(share => `
-                                    <div class="share-badge ${share.status === 'paid' ? 'paid' : ''}">
-                                        ${share.status === 'paid' ? `
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <polyline points="20 6 9 17 4 12"/>
-                                            </svg>
-                                        ` : ''}
-                                        ${escapeHtml(share.user?.display_name || share.user?.email || 'Uzivatel')}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        ` : ''}
+                            ${shares.length > 0 ? `
+                                <div class="purchase-shares">
+                                    ${shares.map(share => `
+                                        <div class="share-badge ${share.status === 'paid' ? 'paid' : ''}">
+                                            ${share.status === 'paid' ? `
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polyline points="20 6 9 17 4 12"/>
+                                                </svg>
+                                            ` : ''}
+                                            ${escapeHtml(share.user?.display_name || share.user?.email || 'Uzivatel')}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        `}
                     </div>
                 `;
             });

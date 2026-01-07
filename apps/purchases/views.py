@@ -162,8 +162,13 @@ class PurchaseRecordViewSet(viewsets.ModelViewSet):
             
             return purchase
         else:
-            # Personal purchase - no split
-            return serializer.save(bought_by=self.request.user)
+            # Personal purchase - no split, mark as paid immediately
+            purchase = serializer.save(
+                bought_by=self.request.user,
+                is_fully_paid=True,
+                total_collected_czk=serializer.validated_data['total_price_czk']
+            )
+            return purchase
     
     @action(detail=True, methods=['get'])
     def summary(self, request, pk=None):
