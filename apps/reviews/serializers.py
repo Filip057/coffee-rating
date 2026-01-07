@@ -135,10 +135,11 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 
 class UserLibraryEntrySerializer(serializers.ModelSerializer):
     """Serializer for user library entries."""
-    
+
     coffeebean = CoffeeBeanMinimalSerializer(read_only=True)
     user = UserMinimalSerializer(read_only=True)
-    
+    user_rating = serializers.SerializerMethodField()
+
     class Meta:
         model = UserLibraryEntry
         fields = [
@@ -149,8 +150,26 @@ class UserLibraryEntrySerializer(serializers.ModelSerializer):
             'added_at',
             'own_price_czk',
             'is_archived',
+            'user_rating',
         ]
-        read_only_fields = ['id', 'user', 'coffeebean', 'added_by', 'added_at']
+        read_only_fields = ['id', 'user', 'coffeebean', 'added_by', 'added_at', 'user_rating']
+
+    def get_user_rating(self, obj):
+        """Get user's rating for this bean (if they've reviewed it)."""
+        from apps.reviews.models import Review
+
+        user = self.context.get('request').user if self.context.get('request') else obj.user
+        if not user or not user.is_authenticated:
+            return None
+
+        try:
+            review = Review.objects.filter(
+                author=user,
+                coffeebean=obj.coffeebean
+            ).values('rating').first()
+            return review['rating'] if review else None
+        except Exception:
+            return None
 
 
 class ReviewStatisticsSerializer(serializers.Serializer):
