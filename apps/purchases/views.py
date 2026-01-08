@@ -3,7 +3,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
-from django.db import transaction
+from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
 from drf_spectacular.utils import extend_schema
@@ -88,15 +88,10 @@ class PurchaseRecordViewSet(viewsets.ModelViewSet):
         if group_id:
             queryset = queryset.filter(group_id=group_id)
         else:
-            # Show all purchases where user is involved:
-            # 1. Personal purchases (group=NULL) bought by user
-            # 2. Group purchases bought by user
-            # 3. Group purchases where user has a payment share
-            from django.db.models import Q
+            # Show all purchases where user is involved (personal + group)
             queryset = queryset.filter(
-                Q(group__isnull=True, bought_by=user) |  # Personal purchases
-                Q(group__isnull=False, bought_by=user) |  # Group purchases bought by user
-                Q(group__isnull=False, payment_shares__user=user)  # Group purchases with user's share
+                models.Q(bought_by=user) |
+                models.Q(payment_shares__user=user)
             ).distinct()
 
         # Filter by user
@@ -309,7 +304,3 @@ def my_outstanding_payments(request):
         'count': shares.count(),
         'shares': serializer.data
     })
-
-
-# Fix import
-from django.db import models
