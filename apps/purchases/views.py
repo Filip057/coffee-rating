@@ -88,10 +88,15 @@ class PurchaseRecordViewSet(viewsets.ModelViewSet):
         if group_id:
             queryset = queryset.filter(group_id=group_id)
         else:
-            # Show purchases where user is involved (bought or has payment share)
+            # Show all purchases where user is involved:
+            # 1. Personal purchases (group=NULL) bought by user
+            # 2. Group purchases bought by user
+            # 3. Group purchases where user has a payment share
+            from django.db.models import Q
             queryset = queryset.filter(
-                models.Q(bought_by=user) |
-                models.Q(payment_shares__user=user)
+                Q(group__isnull=True, bought_by=user) |  # Personal purchases
+                Q(group__isnull=False, bought_by=user) |  # Group purchases bought by user
+                Q(group__isnull=False, payment_shares__user=user)  # Group purchases with user's share
             ).distinct()
 
         # Filter by user
