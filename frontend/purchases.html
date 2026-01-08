@@ -265,7 +265,7 @@
             outstandingList.innerHTML = html;
         }
 
-        // Render my purchases
+        // Render my purchases - SIMPLE VERSION
         function renderMyPurchases(purchases) {
             if (purchases.length === 0) {
                 myPurchasesList.innerHTML = `
@@ -280,60 +280,12 @@
 
             let html = '';
             purchases.forEach(purchase => {
-                const beanName = purchase.coffeebean?.name || purchase.coffeebean_name || 'Neznama kava';
-                const totalCollected = parseFloat(purchase.total_collected_czk || 0);
+                const beanName = purchase.coffeebean_name || 'Neznama kava';
                 const totalPrice = parseFloat(purchase.total_price_czk || 0);
-                const progress = totalPrice > 0 ? (totalCollected / totalPrice * 100) : 0;
-                const shares = purchase.payment_shares || [];
-                const paidShares = shares.filter(s => s.status === 'paid').length;
-                const totalShares = shares.length;
                 const isPersonal = !purchase.group;
                 const isPaid = purchase.is_fully_paid;
 
-                // Build status/progress section based on purchase type
-                let statusSection = '';
-                if (isPersonal) {
-                    // Personal purchase - show simple status badge
-                    const statusClass = isPaid ? 'paid' : 'unpaid';
-                    const statusIcon = isPaid
-                        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
-                        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-                    const statusText = isPaid ? 'Osobni nakup - Zaplaceno' : 'Osobni nakup - Nezaplaceno';
-
-                    statusSection = `
-                        <div class="purchase-status-badge ${statusClass}">
-                            ${statusIcon}
-                            ${statusText}
-                        </div>
-                    `;
-                } else {
-                    // Group purchase - show progress and shares
-                    statusSection = `
-                        <div class="purchase-progress">
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%"></div>
-                            </div>
-                            <div class="progress-text">
-                                <span>${formatCZK(totalCollected)} vybrano</span>
-                                <span>${paidShares}/${totalShares} zaplaceno</span>
-                            </div>
-                        </div>
-                    `;
-
-                    if (shares.length > 0) {
-                        const sharesHtml = shares.map(share => {
-                            const shareClass = share.status === 'paid' ? 'paid' : '';
-                            const checkIcon = share.status === 'paid'
-                                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>'
-                                : '';
-                            const userName = escapeHtml(share.user?.display_name || share.user?.email || 'Uzivatel');
-                            return `<div class="share-badge ${shareClass}">${checkIcon}${userName}</div>`;
-                        }).join('');
-
-                        statusSection += `<div class="purchase-shares">${sharesHtml}</div>`;
-                    }
-                }
-
+                // Simple purchase card
                 html += `
                     <div class="purchase-card">
                         <div class="purchase-header">
@@ -342,11 +294,9 @@
                                 <p>${formatDate(purchase.date || purchase.created_at)}</p>
                             </div>
                             <div class="purchase-total">
-                                <div class="purchase-total-label">Celkem</div>
                                 <div class="purchase-total-amount">${formatCZK(totalPrice)}</div>
                             </div>
                         </div>
-                        ${statusSection}
                     </div>
                 `;
             });
@@ -488,14 +438,25 @@
         async function loadMyPurchases() {
             try {
                 const response = await api.purchases.list();
-                const purchases = response.results || response || [];
 
-                console.log('API returned purchases:', purchases.length);
-                console.log('All purchases:', purchases);
+                // Handle pagination
+                let allPurchases = [];
+                if (response.results) {
+                    // Paginated response
+                    allPurchases = response.results;
+                } else if (Array.isArray(response)) {
+                    // Direct array response
+                    allPurchases = response;
+                }
+
+                console.log('API returned purchases:', allPurchases.length);
+                console.log('All purchases:', allPurchases);
 
                 // Filter purchases made by current user
                 const user = AuthStore.getUser();
-                myPurchases = purchases.filter(p => p.bought_by?.id === user?.id);
+                myPurchases = allPurchases.filter(p => {
+                    return p.bought_by && p.bought_by.id === user.id;
+                });
 
                 console.log('Filtered to user purchases:', myPurchases.length);
                 console.log('User purchases:', myPurchases);
