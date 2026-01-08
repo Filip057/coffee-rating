@@ -490,9 +490,15 @@
                 const response = await api.purchases.list();
                 const purchases = response.results || response || [];
 
+                console.log('API returned purchases:', purchases.length);
+                console.log('All purchases:', purchases);
+
                 // Filter purchases made by current user
                 const user = AuthStore.getUser();
                 myPurchases = purchases.filter(p => p.bought_by?.id === user?.id);
+
+                console.log('Filtered to user purchases:', myPurchases.length);
+                console.log('User purchases:', myPurchases);
 
                 renderMyPurchases(myPurchases);
 
