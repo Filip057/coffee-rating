@@ -7,8 +7,10 @@ app_name = 'purchases'
 # Router for ViewSets
 # Note: shares must be registered BEFORE empty prefix to avoid URL conflicts
 router = DefaultRouter()
+router.register(r'personal', views.PersonalPurchaseViewSet, basename='personal-purchase')
+router.register(r'group', views.GroupPurchaseViewSet, basename='group-purchase')
 router.register(r'shares', views.PaymentShareViewSet, basename='share')
-router.register(r'', views.PurchaseRecordViewSet, basename='purchase')
+router.register(r'', views.PurchaseRecordViewSet, basename='purchase')  # Legacy, keep for now
 
 urlpatterns = [
     # Purchase ViewSet routes

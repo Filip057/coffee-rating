@@ -45,7 +45,19 @@ const Config = {
 
     // Purchases endpoints
     PURCHASES: {
-        LIST: '/purchases/',
+        LIST: '/purchases/',  // Legacy - returns all purchases
+        PERSONAL: {
+            LIST: '/purchases/personal/',
+            CREATE: '/purchases/personal/',
+            DETAIL: (id) => `/purchases/personal/${id}/`,
+        },
+        GROUP: {
+            LIST: '/purchases/group/',
+            CREATE: '/purchases/group/',
+            DETAIL: (id) => `/purchases/group/${id}/`,
+            SHARES: (id) => `/purchases/group/${id}/shares/`,
+            MARK_PAID: (id) => `/purchases/group/${id}/mark_paid/`,
+        },
         MY_OUTSTANDING: '/purchases/my_outstanding/',
         DETAIL: (id) => `/purchases/${id}/`,
         SHARES: '/purchases/shares/',
