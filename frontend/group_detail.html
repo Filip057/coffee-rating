@@ -642,8 +642,10 @@
         // Load purchases
         async function loadPurchases() {
             try {
-                const response = await api.purchases.list({ group: groupId });
-                const purchases = response.results || response;
+                const response = await api.purchases.group.list();
+                const allPurchases = response.results || response;
+                // Filter to only this group's purchases
+                const purchases = allPurchases.filter(p => p.group?.id === groupId);
                 purchasesBadge.textContent = purchases.length;
 
                 if (purchases.length === 0) {
@@ -1102,12 +1104,18 @@
             addPurchaseError.classList.remove('visible');
 
             try {
-                await api.purchases.create({
+                const currentUser = AuthStore.getUser();
+                const today = new Date().toISOString().split('T')[0];
+
+                await api.purchases.group.create({
                     coffeebean: beanId,
                     group: groupId,
+                    bought_by: currentUser.id,
                     total_price_czk: price,
-                    weight_grams: weight,
-                    notes: purchaseNote.value.trim() || undefined
+                    package_weight_grams: weight,
+                    date: today,
+                    purchase_location: 'other',
+                    note: purchaseNote.value.trim() || ''
                 });
                 closeAddPurchaseModal();
                 loadPurchases(); // Refresh the purchases list

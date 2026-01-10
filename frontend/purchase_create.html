@@ -565,13 +565,18 @@
                     purchaseData.note = noteInput.value.trim();
                 }
 
+                // Create purchase based on type
                 if (purchaseType === 'group') {
+                    const currentUser = AuthStore.getUser();
                     purchaseData.group = groupSelect.value;
+                    purchaseData.bought_by = currentUser.id;  // Current user is the buyer
                     purchaseData.split_members = Array.from(selectedMembers);
-                }
 
-                // Create purchase
-                await api.purchases.create(purchaseData);
+                    await api.purchases.group.create(purchaseData);
+                } else {
+                    // Personal purchase
+                    await api.purchases.personal.create(purchaseData);
+                }
 
                 showToast('Nakup byl ulozen', 'success');
 
