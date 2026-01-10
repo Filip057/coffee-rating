@@ -463,6 +463,96 @@ const api = {
      */
     purchases: {
         /**
+         * Personal purchase methods
+         */
+        personal: {
+            /**
+             * Get all personal purchases for current user
+             * @returns {Promise<Array>}
+             */
+            async list() {
+                return request(Config.PURCHASES.PERSONAL.LIST);
+            },
+
+            /**
+             * Create a new personal purchase
+             * @param {Object} data - { coffeebean, variant?, total_price_czk, package_weight_grams?, date?, purchase_location?, eshop_url?, note? }
+             * @returns {Promise<Object>}
+             */
+            async create(data) {
+                return request(Config.PURCHASES.PERSONAL.CREATE, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                });
+            },
+
+            /**
+             * Get personal purchase details
+             * @param {string} id - Purchase ID
+             * @returns {Promise<Object>}
+             */
+            async get(id) {
+                return request(Config.PURCHASES.PERSONAL.DETAIL(id));
+            },
+        },
+
+        /**
+         * Group purchase methods
+         */
+        group: {
+            /**
+             * Get all group purchases user is involved in
+             * @returns {Promise<Array>}
+             */
+            async list() {
+                return request(Config.PURCHASES.GROUP.LIST);
+            },
+
+            /**
+             * Create a new group purchase
+             * @param {Object} data - { group, bought_by, coffeebean, variant?, total_price_czk, package_weight_grams?, date?, purchase_location?, eshop_url?, note?, split_members? }
+             * @returns {Promise<Object>}
+             */
+            async create(data) {
+                return request(Config.PURCHASES.GROUP.CREATE, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                });
+            },
+
+            /**
+             * Get group purchase details
+             * @param {string} id - Purchase ID
+             * @returns {Promise<Object>}
+             */
+            async get(id) {
+                return request(Config.PURCHASES.GROUP.DETAIL(id));
+            },
+
+            /**
+             * Get payment shares for a group purchase
+             * @param {string} id - Purchase ID
+             * @returns {Promise<Array>}
+             */
+            async getShares(id) {
+                return request(Config.PURCHASES.GROUP.SHARES(id));
+            },
+
+            /**
+             * Mark a payment share as paid for a group purchase
+             * @param {string} id - Purchase ID
+             * @param {Object} data - { payment_reference?, note? }
+             * @returns {Promise<Object>}
+             */
+            async markPaid(id, data = {}) {
+                return request(Config.PURCHASES.GROUP.MARK_PAID(id), {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                });
+            },
+        },
+
+        /**
          * Get outstanding payments for current user
          * @returns {Promise<{total_outstanding: number, count: number, shares: Array}>}
          */
@@ -471,7 +561,7 @@ const api = {
         },
 
         /**
-         * Get all purchases
+         * Get all purchases (legacy - returns combined personal + group)
          * @param {Object} options - { group?: string }
          * @returns {Promise<Array>}
          */
@@ -485,7 +575,7 @@ const api = {
         },
 
         /**
-         * Create a new purchase
+         * Create a new purchase (legacy)
          * @param {Object} data - { coffeebean, group?, total_price_czk, weight_grams?, notes? }
          * @returns {Promise<Object>}
          */

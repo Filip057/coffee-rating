@@ -7,13 +7,21 @@ from django.db import transaction, models
 from django.shortcuts import get_object_or_404
 from decimal import Decimal
 from drf_spectacular.utils import extend_schema
-from .models import PurchaseRecord, PaymentShare, PaymentStatus
+from .models import (
+    PurchaseRecord, PaymentShare, PaymentStatus,
+    PersonalPurchase, GroupPurchase
+)
 from .serializers import (
     PurchaseRecordSerializer,
     PurchaseRecordCreateSerializer,
     PurchaseRecordListSerializer,
     PaymentShareSerializer,
     PurchaseSummarySerializer,
+    # New serializers
+    PersonalPurchaseSerializer,
+    PersonalPurchaseCreateSerializer,
+    GroupPurchaseSerializer,
+    GroupPurchaseCreateSerializer,
     # Input serializers (Phase 2)
     PurchaseFilterSerializer,
     PaymentShareFilterSerializer,
@@ -278,6 +286,161 @@ class PaymentShareViewSet(viewsets.ReadOnlyModelViewSet):
             'payment_reference': share.payment_reference,
             'amount_czk': share.amount_czk,
         })
+
+
+# =============================================================================
+# NEW: Personal Purchase ViewSet
+# =============================================================================
+
+
+class PersonalPurchaseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for PersonalPurchase CRUD operations.
+
+    list: Get all personal purchases for current user
+    create: Create a new personal purchase
+    retrieve: Get a specific personal purchase
+    update: Update a personal purchase
+    destroy: Delete a personal purchase
+    """
+
+    serializer_class = PersonalPurchaseSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PurchasePagination
+
+    def get_queryset(self):
+        """Filter to only current user's personal purchases."""
+        return PersonalPurchase.objects.filter(user=self.request.user).select_related(
+            'coffeebean',
+            'variant'
+        )
+
+    def get_serializer_class(self):
+        """Use different serializers for different actions."""
+        if self.action == 'create':
+            return PersonalPurchaseCreateSerializer
+        return PersonalPurchaseSerializer
+
+    def perform_create(self, serializer):
+        """Set user to current user."""
+        serializer.save(user=self.request.user)
+
+
+# =============================================================================
+# NEW: Group Purchase ViewSet
+# =============================================================================
+
+
+class GroupPurchaseViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for GroupPurchase CRUD operations.
+
+    list: Get all group purchases user is involved in
+    create: Create a new group purchase with payment splitting
+    retrieve: Get a specific group purchase
+    update: Update a group purchase
+    destroy: Delete a group purchase
+    """
+
+    serializer_class = GroupPurchaseSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = PurchasePagination
+
+    def get_queryset(self):
+        """Filter to purchases where user is a group member or has a payment share."""
+        user = self.request.user
+        return GroupPurchase.objects.filter(
+            models.Q(group__memberships__user=user) |
+            models.Q(payment_shares__user=user)
+        ).select_related(
+            'group',
+            'bought_by',
+            'coffeebean',
+            'variant'
+        ).prefetch_related('payment_shares').distinct()
+
+    def get_serializer_class(self):
+        """Use different serializers for different actions."""
+        if self.action == 'create':
+            return GroupPurchaseCreateSerializer
+        return GroupPurchaseSerializer
+
+    @transaction.atomic
+    def perform_create(self, serializer):
+        """
+        Create group purchase with payment splitting.
+        Auto-marks buyer's share as paid.
+        """
+        split_members = serializer.validated_data.pop('split_members', None)
+        group = serializer.validated_data['group']
+        bought_by = serializer.validated_data['bought_by']
+
+        # Create purchase
+        purchase = serializer.save()
+
+        # Create payment shares
+        shares = PurchaseSplitService.create_group_purchase(
+            group_id=group.id,
+            bought_by_user=bought_by,
+            total_price_czk=purchase.total_price_czk,
+            date=purchase.date,
+            coffeebean=purchase.coffeebean,
+            variant=purchase.variant,
+            package_weight_grams=purchase.package_weight_grams,
+            note=purchase.note,
+            split_members=split_members
+        )
+
+        # Auto-mark buyer's share as PAID
+        buyer_share = purchase.payment_shares.filter(user=bought_by).first()
+        if buyer_share:
+            from django.utils import timezone
+            buyer_share.status = PaymentStatus.PAID
+            buyer_share.paid_at = timezone.now()
+            buyer_share.paid_by = bought_by
+            buyer_share.save()
+
+            # Update purchase collection status
+            purchase.update_collection_status()
+
+        return purchase
+
+    @action(detail=True, methods=['get'])
+    def shares(self, request, pk=None):
+        """
+        Get all payment shares for this purchase.
+
+        GET /api/purchases/group/{id}/shares/
+        """
+        purchase = self.get_object()
+        shares = purchase.payment_shares.select_related('user', 'paid_by')
+        serializer = PaymentShareSerializer(shares, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def mark_paid(self, request, pk=None):
+        """
+        Mark a payment share as paid.
+
+        POST /api/purchases/group/{id}/mark_paid/
+        Body: {"payment_reference": "COFFEE-...", "note": "optional"}
+        """
+        purchase = self.get_object()
+
+        # Validate input
+        input_serializer = MarkPaidInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+
+        payment_reference = input_serializer.validated_data.get('payment_reference')
+
+        # Use service method for payment reconciliation
+        share = PurchaseSplitService.mark_purchase_paid(
+            purchase_id=purchase.id,
+            payment_reference=payment_reference,
+            user=request.user if not payment_reference else None
+        )
+
+        return Response(PaymentShareSerializer(share).data)
 
 
 @extend_schema(

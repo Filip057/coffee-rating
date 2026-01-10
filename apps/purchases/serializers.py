@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import PurchaseRecord, PaymentShare, PaymentStatus
+from .models import (
+    PaymentShare, PaymentStatus,
+    PersonalPurchase, GroupPurchase, PURCHASE_LOCATIONS
+)
 from apps.accounts.models import User
 from apps.beans.models import CoffeeBean, CoffeeBeanVariant
 from apps.groups.models import Group
@@ -91,11 +94,173 @@ class UserMinimalSerializer(serializers.ModelSerializer):
 
 class CoffeeBeanMinimalSerializer(serializers.ModelSerializer):
     """Minimal bean info for nested serialization."""
-    
+
     class Meta:
         model = CoffeeBean
         fields = ['id', 'name', 'roastery_name']
         read_only_fields = fields
+
+
+class GroupMinimalSerializer(serializers.ModelSerializer):
+    """Minimal group info for nested serialization."""
+
+    class Meta:
+        model = Group
+        fields = ['id', 'name']
+        read_only_fields = fields
+
+
+# =============================================================================
+# Personal Purchase Serializers
+# =============================================================================
+
+
+class PersonalPurchaseSerializer(serializers.ModelSerializer):
+    """Serializer for personal purchases."""
+
+    user = UserMinimalSerializer(read_only=True)
+    coffeebean = CoffeeBeanMinimalSerializer(read_only=True)
+    coffeebean_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PersonalPurchase
+        fields = [
+            'id',
+            'user',
+            'coffeebean',
+            'coffeebean_name',
+            'variant',
+            'total_price_czk',
+            'currency',
+            'package_weight_grams',
+            'date',
+            'purchase_location',
+            'eshop_url',
+            'note',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'user', 'created_at', 'updated_at']
+
+    def get_coffeebean_name(self, obj):
+        if obj.coffeebean:
+            return f"{obj.coffeebean.roastery_name} - {obj.coffeebean.name}"
+        return None
+
+
+class PersonalPurchaseCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating personal purchases."""
+
+    class Meta:
+        model = PersonalPurchase
+        fields = [
+            'coffeebean',
+            'variant',
+            'total_price_czk',
+            'package_weight_grams',
+            'date',
+            'purchase_location',
+            'eshop_url',
+            'note',
+        ]
+
+
+# =============================================================================
+# Group Purchase Serializers
+# =============================================================================
+
+
+class GroupPurchaseSerializer(serializers.ModelSerializer):
+    """Serializer for group purchases."""
+
+    group = GroupMinimalSerializer(read_only=True)
+    bought_by = UserMinimalSerializer(read_only=True)
+    coffeebean = CoffeeBeanMinimalSerializer(read_only=True)
+    coffeebean_name = serializers.SerializerMethodField()
+    payment_shares = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GroupPurchase
+        fields = [
+            'id',
+            'group',
+            'bought_by',
+            'coffeebean',
+            'coffeebean_name',
+            'variant',
+            'total_price_czk',
+            'currency',
+            'package_weight_grams',
+            'date',
+            'purchase_location',
+            'eshop_url',
+            'note',
+            'total_collected_czk',
+            'is_fully_paid',
+            'payment_shares',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'bought_by',
+            'total_collected_czk',
+            'is_fully_paid',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_coffeebean_name(self, obj):
+        if obj.coffeebean:
+            return f"{obj.coffeebean.roastery_name} - {obj.coffeebean.name}"
+        return None
+
+    def get_payment_shares(self, obj):
+        # Avoid circular import by importing here
+        shares = obj.payment_shares.all()
+        from .serializers import PaymentShareSerializer
+        return PaymentShareSerializer(shares, many=True).data
+
+
+class GroupPurchaseCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating group purchases."""
+
+    split_members = serializers.ListField(
+        child=serializers.UUIDField(),
+        write_only=True,
+        required=False,
+        help_text="List of user IDs to split payment among. Defaults to all group members."
+    )
+
+    class Meta:
+        model = GroupPurchase
+        fields = [
+            'group',
+            'bought_by',
+            'coffeebean',
+            'variant',
+            'total_price_czk',
+            'package_weight_grams',
+            'date',
+            'purchase_location',
+            'eshop_url',
+            'note',
+            'split_members',
+        ]
+
+    def validate(self, attrs):
+        """Validate group purchase data."""
+        group = attrs.get('group')
+        bought_by = attrs.get('bought_by')
+
+        # Ensure bought_by is a group member
+        if group and bought_by:
+            if not group.memberships.filter(user=bought_by).exists():
+                raise serializers.ValidationError({
+                    'bought_by': 'Buyer must be a member of the selected group.'
+                })
+
+        return attrs
 
 
 class PaymentShareSerializer(serializers.ModelSerializer):

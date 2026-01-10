@@ -437,29 +437,25 @@
         // Load my purchases
         async function loadMyPurchases() {
             try {
-                const response = await api.purchases.list();
+                // Load both personal and group purchases
+                const [personalResponse, groupResponse] = await Promise.all([
+                    api.purchases.personal.list(),
+                    api.purchases.group.list()
+                ]);
 
-                // Handle pagination
-                let allPurchases = [];
-                if (response.results) {
-                    // Paginated response
-                    allPurchases = response.results;
-                } else if (Array.isArray(response)) {
-                    // Direct array response
-                    allPurchases = response;
-                }
+                // Handle pagination for both
+                const personalPurchases = personalResponse.results || personalResponse || [];
+                const groupPurchases = groupResponse.results || groupResponse || [];
 
-                console.log('API returned purchases:', allPurchases.length);
-                console.log('All purchases:', allPurchases);
+                // Combine all purchases
+                myPurchases = [...personalPurchases, ...groupPurchases];
 
-                // Filter purchases made by current user
-                const user = AuthStore.getUser();
-                myPurchases = allPurchases.filter(p => {
-                    return p.bought_by && p.bought_by.id === user.id;
-                });
+                // Sort by date (newest first)
+                myPurchases.sort((a, b) => new Date(b.date) - new Date(a.date));
 
-                console.log('Filtered to user purchases:', myPurchases.length);
-                console.log('User purchases:', myPurchases);
+                console.log('Personal purchases:', personalPurchases.length);
+                console.log('Group purchases:', groupPurchases.length);
+                console.log('Total purchases:', myPurchases.length);
 
                 renderMyPurchases(myPurchases);
 

@@ -11,43 +11,37 @@ class PaymentStatus(models.TextChoices):
     REFUNDED = 'refunded', 'Refunded'
 
 
-class PurchaseRecord(models.Model):
-    """Coffee purchase record (individual or group)."""
-    
+# Purchase location choices
+PURCHASE_LOCATIONS = [
+    ('eshop', 'E-shop'),
+    ('cafe', 'Kavarna'),
+    ('roastery', 'Prazirna'),
+    ('store', 'Prodejna'),
+    ('other', 'Jine'),
+]
+
+
+class PurchaseBase(models.Model):
+    """Abstract base model for all purchase types."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Group context (nullable for personal purchases)
-    group = models.ForeignKey(
-        'groups.Group',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name='purchases'
-    )
-    
+
     # Coffee bean reference
     coffeebean = models.ForeignKey(
         'beans.CoffeeBean',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='purchases'
+        related_name='%(class)s_purchases'
     )
     variant = models.ForeignKey(
         'beans.CoffeeBeanVariant',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='purchases'
+        related_name='%(class)s_purchases'
     )
-    
-    # Purchaser
-    bought_by = models.ForeignKey(
-        'accounts.User',
-        on_delete=models.CASCADE,
-        related_name='purchases_made'
-    )
-    
+
     # Financial details
     total_price_czk = models.DecimalField(
         max_digits=10,
@@ -55,55 +49,99 @@ class PurchaseRecord(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))]
     )
     currency = models.CharField(max_length=3, default='CZK')
-    
-    # Package info (may differ from variant if custom)
+
+    # Package info
     package_weight_grams = models.PositiveIntegerField(null=True, blank=True)
-    
+
     # Purchase metadata
     date = models.DateField()
-    purchase_location = models.CharField(max_length=200, blank=True)
+    purchase_location = models.CharField(
+        max_length=20,
+        choices=PURCHASE_LOCATIONS,
+        default='other'
+    )
+    eshop_url = models.URLField(blank=True)
     note = models.TextField(blank=True)
-    
-    # Reconciliation tracking
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class PersonalPurchase(PurchaseBase):
+    """Personal coffee purchase - simple tracking for individual user."""
+
+    user = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='personal_purchases'
+    )
+
+    class Meta:
+        db_table = 'personal_purchases'
+        indexes = [
+            models.Index(fields=['user', 'date']),
+            models.Index(fields=['date']),
+            models.Index(fields=['coffeebean', 'date']),
+        ]
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        bean = self.coffeebean.name if self.coffeebean else "Unknown"
+        return f"{self.user.email} - {bean} - {self.total_price_czk} CZK"
+
+
+class GroupPurchase(PurchaseBase):
+    """Group coffee purchase with payment splitting."""
+
+    group = models.ForeignKey(
+        'groups.Group',
+        on_delete=models.CASCADE,
+        related_name='purchases'
+    )
+    bought_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='group_purchases_bought'
+    )
+
+    # Payment tracking
     total_collected_czk = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=Decimal('0.00')
     )
     is_fully_paid = models.BooleanField(default=False)
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        db_table = 'purchase_records'
+        db_table = 'group_purchases'
         indexes = [
             models.Index(fields=['group', 'date']),
             models.Index(fields=['bought_by', 'date']),
-            models.Index(fields=['coffeebean', 'date']),
             models.Index(fields=['date']),
             models.Index(fields=['is_fully_paid']),
         ]
         ordering = ['-date', '-created_at']
-    
+
     def __str__(self):
-        context = f"Group: {self.group.name}" if self.group else "Personal"
         bean = self.coffeebean.name if self.coffeebean else "Unknown"
-        return f"{bean} - {self.total_price_czk} CZK ({context})"
-    
+        return f"Group: {self.group.name} - {bean} - {self.total_price_czk} CZK"
+
     def update_collection_status(self):
         """Recalculate collected amount and check if fully paid."""
         from django.db.models import Sum
-        
+
         collected = self.payment_shares.filter(
             status=PaymentStatus.PAID
         ).aggregate(total=Sum('amount_czk'))['total'] or Decimal('0.00')
-        
+
         self.total_collected_czk = collected
         self.is_fully_paid = (collected >= self.total_price_czk)
         self.save(update_fields=['total_collected_czk', 'is_fully_paid', 'updated_at'])
-    
+
     def get_outstanding_balance(self):
         """Return unpaid amount."""
         return max(Decimal('0.00'), self.total_price_czk - self.total_collected_czk)
@@ -111,11 +149,11 @@ class PurchaseRecord(models.Model):
 
 class PaymentShare(models.Model):
     """Individual payment share for a group purchase."""
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
+
     purchase = models.ForeignKey(
-        PurchaseRecord,
+        GroupPurchase,
         on_delete=models.CASCADE,
         related_name='payment_shares'
     )
