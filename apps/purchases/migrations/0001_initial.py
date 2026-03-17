@@ -13,8 +13,8 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('beans', '__first__'),
-        ('groups', '__first__'),
+        ('beans', '0002_mergehistory'),
+        ('groups', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
